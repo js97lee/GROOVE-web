@@ -34,7 +34,7 @@ function Mascot({
 }) {
   return (
     <img
-      className={`mascot ${large ? 'large' : ''}`}
+      className={`mascot mascot-${variant} ${large ? 'large' : ''}`}
       src={asset(`character-${variant}.png`)}
       alt="GROOVE 마스코트"
     />
@@ -239,7 +239,7 @@ function App() {
                   <span>{analysis.cocktailName}</span>
                   <small>칵테일 신뢰도 {analysis.cocktailConfidence}%</small>
                 </div>
-                <h2>{analysis.musicCategory} MOOD MATCH</h2>
+                <h2>MOOD MATCH</h2>
                 <strong>{analysis.moodMatch}%</strong>
                 <div className="mood-tags">
                   {analysis.keywords.map((keyword) => (
