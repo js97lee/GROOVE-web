@@ -2,7 +2,17 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
 
 type CameraState = 'idle' | 'loading' | 'active' | 'error'
-type Scene = 'splash' | 'intro' | 'live' | 'result'
+type Scene =
+  | 'splash'
+  | 'intro'
+  | 'countdown'
+  | 'matching'
+  | 'result'
+  | 'music'
+  | 'player'
+  | 'share'
+  | 'gallery'
+type MascotVariant = 'coffee' | 'cocktail' | 'listen' | 'cozy'
 
 type AnalysisResult = {
   cocktailName: string
@@ -16,36 +26,55 @@ type AnalysisResult = {
 }
 
 const asset = (name: string) => `${import.meta.env.BASE_URL}assets/${name}`
+const wait = (milliseconds: number) =>
+  new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds))
 
 function GrooveLogo() {
   return (
-    <img className="groove-logo" src={asset('Groove app icon.png')} alt="Groove — Feel the Groove" />
-  )
-}
-
-type MascotVariant = 'coffee' | 'cocktail' | 'listen' | 'cozy'
-
-function Mascot({
-  large = false,
-  variant = 'coffee',
-}: {
-  large?: boolean
-  variant?: MascotVariant
-}) {
-  return (
     <img
-      className={`mascot mascot-${variant} ${large ? 'large' : ''}`}
-      src={asset(`character-${variant}.png`)}
-      alt="GROOVE 마스코트"
+      className="groove-logo"
+      src={asset('Groove app icon.png')}
+      alt="Groove — Feel the Groove"
     />
   )
 }
 
+function SpriteMascot({
+  variant = 'coffee',
+  size = 'regular',
+}: {
+  variant?: MascotVariant
+  size?: 'regular' | 'large' | 'small'
+}) {
+  return (
+    <span
+      className={`sprite-mascot sprite-${variant} sprite-${size}`}
+      role="img"
+      aria-label="GROOVE 마스코트"
+    >
+      <img src={asset(`sprites/${variant}-sprite.png`)} alt="" />
+    </span>
+  )
+}
+
 function StatusBar() {
+  const [now, setNow] = useState(() => new Date())
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  const currentTime = new Intl.DateTimeFormat('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(now)
+
   return (
     <header className="status-bar" aria-label="상태 표시줄">
       <div className="status-left">
-        <span>8:32</span>
+        <span>{currentTime}</span>
         <span className="weather" aria-label="맑음">☀︎</span>
         <span>72°</span>
         <i />
@@ -58,17 +87,41 @@ function StatusBar() {
   )
 }
 
+function BackButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button className="back-button" type="button" onClick={onClick} aria-label="이전 화면">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="m15 5-7 7 7 7" />
+      </svg>
+    </button>
+  )
+}
+
+function VinylPlayer({ large = false }: { large?: boolean }) {
+  return (
+    <div className={`vinyl-player ${large ? 'vinyl-player-large' : ''}`} aria-hidden="true">
+      <img className="vinyl" src={asset('CD-Play.png')} alt="" />
+      <img className="vinyl-pin" src={asset('CD-pin.png')} alt="" />
+    </div>
+  )
+}
+
 function App() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const splashTimerRef = useRef<number | null>(null)
+  const objectUrlsRef = useRef<string[]>([])
   const [cameraState, setCameraState] = useState<CameraState>('idle')
   const [scene, setScene] = useState<Scene>('splash')
+  const [countdown, setCountdown] = useState(3)
   const [errorMessage, setErrorMessage] = useState('')
   const [flash, setFlash] = useState(false)
   const [capturedImage, setCapturedImage] = useState('')
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
   const [analysisError, setAnalysisError] = useState('')
+  const [galleryImages, setGalleryImages] = useState<string[]>([])
+  const [selectedShareImage, setSelectedShareImage] = useState('')
+  const [shareStatus, setShareStatus] = useState('')
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop())
@@ -119,16 +172,34 @@ function App() {
   }, [stopCamera])
 
   useEffect(() => {
+    const objectUrls = objectUrlsRef.current
     return () => {
       stopCamera()
       if (splashTimerRef.current) window.clearTimeout(splashTimerRef.current)
+      objectUrls.forEach((url) => URL.revokeObjectURL(url))
     }
   }, [stopCamera])
+
+  const requestAnalysis = async (image: string) => {
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image }),
+    })
+    const contentType = response.headers.get('content-type') || ''
+    if (!contentType.includes('application/json')) {
+      throw new Error('AI 분석 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.')
+    }
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error || '분석에 실패했습니다.')
+    return data as AnalysisResult
+  }
 
   const captureAndAnalyze = async () => {
     const video = videoRef.current
     if (!video || !video.videoWidth || !video.videoHeight) {
       setAnalysisError('카메라 화면이 준비되지 않았어요. 다시 시도해 주세요.')
+      setScene('matching')
       return
     }
 
@@ -143,47 +214,145 @@ function App() {
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
     const image = canvas.toDataURL('image/jpeg', 0.82)
     setCapturedImage(image)
+    setSelectedShareImage(image)
+    setGalleryImages([image])
     setAnalysis(null)
     setAnalysisError('')
     setFlash(true)
+    setScene('matching')
     window.setTimeout(() => setFlash(false), 420)
-    window.setTimeout(() => setScene('live'), 180)
 
     try {
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image }),
-      })
-      const contentType = response.headers.get('content-type') || ''
-      if (!contentType.includes('application/json')) {
-        throw new Error('AI 분석 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.')
-      }
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || '분석에 실패했습니다.')
-      setAnalysis(data as AnalysisResult)
+      const [result] = await Promise.all([requestAnalysis(image), wait(3000)])
+      setAnalysis(result)
       setScene('result')
     } catch (error) {
       setAnalysisError(error instanceof Error ? error.message : '분석에 실패했습니다.')
     }
   }
 
+  const startCountdown = async () => {
+    setCapturedImage('')
+    setAnalysisError('')
+    setScene('countdown')
+    for (const number of [3, 2, 1]) {
+      setCountdown(number)
+      await wait(760)
+    }
+    await captureAndAnalyze()
+  }
+
+  const retryCapture = () => {
+    setCapturedImage('')
+    setAnalysisError('')
+    setScene('intro')
+  }
+
+  const loadImage = (source: string) =>
+    new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image()
+      image.onload = () => resolve(image)
+      image.onerror = reject
+      image.src = source
+    })
+
+  const createShareCard = async () => {
+    if (!analysis || !selectedShareImage) throw new Error('공유할 결과가 없습니다.')
+    const source = await loadImage(selectedShareImage)
+    const canvas = document.createElement('canvas')
+    canvas.width = 1080
+    canvas.height = 1080
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('공유 이미지를 만들 수 없습니다.')
+
+    const scale = Math.max(canvas.width / source.width, canvas.height / source.height)
+    const width = source.width * scale
+    const height = source.height * scale
+    context.drawImage(source, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height)
+    const gradient = context.createLinearGradient(0, 250, 0, 1080)
+    gradient.addColorStop(0, 'rgba(8, 6, 10, 0.05)')
+    gradient.addColorStop(1, 'rgba(8, 6, 10, 0.9)')
+    context.fillStyle = gradient
+    context.fillRect(0, 0, 1080, 1080)
+
+    context.fillStyle = '#ffffff'
+    context.font = '700 42px "NanumSquare Neo", sans-serif'
+    context.fillText('GROOVE MOOD MATCH', 76, 730)
+    context.fillStyle = '#a873ff'
+    context.font = '800 126px "NanumSquare Neo", sans-serif'
+    context.fillText(`${analysis.moodMatch}%`, 70, 865)
+    context.fillStyle = '#ffffff'
+    context.font = '600 36px "NanumSquare Neo", sans-serif'
+    context.fillText(analysis.keywords.map((word) => `#${word.replace(/^#/, '')}`).join('  '), 76, 930)
+    context.font = '600 30px "NanumSquare Neo", sans-serif'
+    context.fillText(`${analysis.trackTitle} · ${analysis.trackArtist}`, 76, 995)
+
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('이미지 생성 실패'))), 'image/png')
+    })
+  }
+
+  const downloadShareCard = async () => {
+    try {
+      const blob = await createShareCard()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'groove-mood.png'
+      link.click()
+      URL.revokeObjectURL(url)
+      setShareStatus('공유 카드를 저장했어요.')
+    } catch (error) {
+      setShareStatus(error instanceof Error ? error.message : '저장하지 못했어요.')
+    }
+  }
+
+  const shareResult = async () => {
+    if (!analysis) return
+    setShareStatus('')
+    const shareText = `나의 GROOVE 무드는 ${analysis.moodMatch}%! ${analysis.trackTitle} · ${analysis.trackArtist}`
+
+    try {
+      const blob = await createShareCard()
+      const file = new File([blob], 'groove-mood.png', { type: 'image/png' })
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title: 'GROOVE Mood Match', text: shareText, files: [file] })
+        setShareStatus('친구에게 GROOVE를 보냈어요.')
+        return
+      }
+
+      await navigator.clipboard?.writeText(shareText)
+      await downloadShareCard()
+      setShareStatus('공유 문구를 복사하고 카드를 저장했어요.')
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return
+      setShareStatus(error instanceof Error ? error.message : '공유하지 못했어요.')
+    }
+  }
+
+  const addGalleryImages = (files: FileList | null) => {
+    if (!files?.length) return
+    const urls = Array.from(files).map((file) => URL.createObjectURL(file))
+    objectUrlsRef.current.push(...urls)
+    setGalleryImages((current) => [...current, ...urls])
+    setSelectedShareImage(urls[0])
+  }
+
+  const youtubeUrl = analysis
+    ? `https://www.youtube.com/results?search_query=${encodeURIComponent(
+        `${analysis.trackTitle} ${analysis.trackArtist}`,
+      )}`
+    : '#'
+
+  const showCapturedFrame = capturedImage && !['splash', 'intro', 'countdown'].includes(scene)
+
   return (
     <main className="page">
       <section className={`xr-frame scene-${scene}`}>
-        <video
-          ref={videoRef}
-          className="camera-feed"
-          muted
-          playsInline
-          aria-label="실시간 카메라 화면"
-        />
-        {capturedImage && scene !== 'intro' && scene !== 'splash' && (
-          <img className="captured-frame" src={capturedImage} alt="촬영된 칵테일" />
-        )}
+        <video ref={videoRef} className="camera-feed" muted playsInline aria-label="실시간 카메라 화면" />
+        {showCapturedFrame && <img className="captured-frame" src={capturedImage} alt="촬영된 칵테일" />}
         <div className="camera-placeholder" aria-hidden="true" />
         <div className="camera-filter" aria-hidden="true" />
-
         <StatusBar />
 
         {cameraState === 'active' && scene === 'splash' && (
@@ -196,8 +365,8 @@ function App() {
         {cameraState === 'active' && scene === 'intro' && (
           <div className="scene intro-scene">
             <h1>오늘의 감성을 한 컷 담아보세요</h1>
-            <Mascot large />
-            <button className="shoot-button" type="button" onClick={captureAndAnalyze}>
+            <SpriteMascot variant="coffee" size="large" />
+            <button className="shoot-button" type="button" onClick={startCountdown}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M7.5 7 9 4.8h6L16.5 7H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2.5Z" />
                 <circle cx="12" cy="13" r="3.5" />
@@ -207,18 +376,33 @@ function App() {
           </div>
         )}
 
-        {cameraState === 'active' && scene === 'live' && (
-          <div className="scene live-scene">
-            <div className="live-mascot">
-              <Mascot variant={analysisError ? 'coffee' : 'cozy'} />
-            </div>
+        {cameraState === 'active' && scene === 'countdown' && (
+          <div className="scene countdown-scene">
+            <span key={countdown}>{countdown}</span>
+            <p>잠시 그대로 있어주세요</p>
+          </div>
+        )}
+
+        {cameraState === 'active' && scene === 'matching' && (
+          <div className="scene matching-scene">
             {analysisError ? (
               <div className="analysis-error">
+                <SpriteMascot variant="coffee" size="large" />
                 <p>{analysisError}</p>
-                <button type="button" onClick={() => setScene('intro')}>다시 촬영</button>
+                <button type="button" onClick={retryCapture}>다시 촬영</button>
               </div>
             ) : (
-              <p><strong>GROOVE가 분석 중이에요</strong><br />칵테일과 어울리는 무드를 찾고 있어요…</p>
+              <>
+                <p>NOW GROOVING...</p>
+                <div className="matching-visual">
+                  <span className="mood-wave wave-one" />
+                  <span className="mood-wave wave-two" />
+                  <span className="mood-wave wave-three" />
+                  <SpriteMascot variant="cozy" size="large" />
+                </div>
+                <div className="matching-progress"><i /></div>
+                <small>사진 속 분위기를 음악으로 바꾸는 중</small>
+              </>
             )}
           </div>
         )}
@@ -227,18 +411,15 @@ function App() {
           <div className="scene result-scene">
             <h1>무드매치 결과가 나왔어요!</h1>
             <div className="result-content">
-              <div className="result-mascot">
-                <Mascot large variant="cocktail" />
-              </div>
+              <div className="result-mascot"><SpriteMascot variant="cocktail" size="large" /></div>
               <article className="mood-card">
-                <div className="vinyl-player" aria-hidden="true">
-                  <img className="vinyl" src={asset('CD-play.png')} alt="" />
-                  <Mascot variant="listen" />
-                </div>
-                <div className="cocktail-name">
-                  <span>{analysis.cocktailName}</span>
-                  <small>칵테일 신뢰도 {analysis.cocktailConfidence}%</small>
-                </div>
+                <VinylPlayer />
+                {analysis.cocktailName !== '칵테일 판별 불가' && (
+                  <div className="cocktail-name">
+                    <span>{analysis.cocktailName}</span>
+                    <small>칵테일 신뢰도 {analysis.cocktailConfidence}%</small>
+                  </div>
+                )}
                 <h2>MOOD MATCH</h2>
                 <strong>{analysis.moodMatch}%</strong>
                 <div className="mood-tags">
@@ -250,46 +431,114 @@ function App() {
                   <b>{analysis.trackTitle}</b>
                   <span>{analysis.trackArtist}</span>
                   <p>{analysis.recommendationReason}</p>
-                  <a
-                    className="listen-button"
-                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${analysis.trackTitle} ${analysis.trackArtist}`)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="m10 8 6 4-6 4V8Z" />
-                    </svg>
+                  <button className="listen-button" type="button" onClick={() => setScene('music')}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 8 6 4-6 4V8Z" /></svg>
                     노래 듣기
-                  </a>
+                  </button>
                 </div>
               </article>
             </div>
-
             <nav className="tool-rail" aria-label="결과 도구">
-              <button type="button" aria-label="음악">
+              <button type="button" aria-label="음악" onClick={() => setScene('music')}>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M9 18V6l10-2v12M9 10l10-2" />
-                  <circle cx="6" cy="18" r="3" />
-                  <circle cx="16" cy="16" r="3" />
+                  <path d="M9 18V6l10-2v12M9 10l10-2" /><circle cx="6" cy="18" r="3" /><circle cx="16" cy="16" r="3" />
                 </svg>
               </button>
               <button type="button" aria-label="위치">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 21s6-5.1 6-11a6 6 0 1 0-12 0c0 5.9 6 11 6 11Z" />
-                  <circle cx="12" cy="10" r="2" />
-                </svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.1 6-11a6 6 0 1 0-12 0c0 5.9 6 11 6 11Z" /><circle cx="12" cy="10" r="2" /></svg>
               </button>
-              <button type="button" aria-label="저장">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M6 4h12v17l-6-4-6 4V4Z" />
-                </svg>
+              <button type="button" aria-label="저장" onClick={downloadShareCard}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v17l-6-4-6 4V4Z" /></svg>
               </button>
-              <button type="button" aria-label="공유">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 15V3M8 7l4-4 4 4M6 11H4v9h16v-9h-2" />
-                </svg>
+              <button type="button" aria-label="공유" onClick={() => setScene('share')}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4M6 11H4v9h16v-9h-2" /></svg>
               </button>
             </nav>
+          </div>
+        )}
+
+        {cameraState === 'active' && scene === 'music' && analysis && (
+          <div className="scene music-scene">
+            <BackButton onClick={() => setScene('result')} />
+            <h1>오늘의 GROOVE 음악을 추천해요</h1>
+            <SpriteMascot variant="listen" size="large" />
+            <button className="music-card" type="button" onClick={() => setScene('player')}>
+              <span className="album-dot" />
+              <span><b>{analysis.trackTitle}</b><small>{analysis.trackArtist}</small></span>
+              <i>›</i>
+            </button>
+            <div className="sound-wave" aria-hidden="true">
+              {Array.from({ length: 20 }, (_, index) => <i key={index} />)}
+            </div>
+          </div>
+        )}
+
+        {cameraState === 'active' && scene === 'player' && analysis && (
+          <div className="scene player-scene">
+            <BackButton onClick={() => setScene('music')} />
+            <div className="now-playing-pill">
+              <span className="album-dot" />
+              <span><b>{analysis.trackTitle}</b><small>{analysis.trackArtist}</small></span>
+            </div>
+            <VinylPlayer large />
+            <div className="player-mascot"><SpriteMascot variant="listen" size="large" /></div>
+            <a className="youtube-play" href={youtubeUrl} target="_blank" rel="noreferrer">
+              <span>▶</span> YouTube에서 재생
+            </a>
+          </div>
+        )}
+
+        {cameraState === 'active' && scene === 'share' && analysis && (
+          <div className="scene share-scene">
+            <BackButton onClick={() => setScene('result')} />
+            <h1>친구에게 GROOVE 하기</h1>
+            <div className="share-summary">
+              <span>MOOD MATCH</span>
+              <strong>{analysis.moodMatch}%</strong>
+              <div>{analysis.keywords.map((word) => <i key={word}>#{word.replace(/^#/, '')}</i>)}</div>
+              <p>{analysis.trackTitle} · {analysis.trackArtist}</p>
+            </div>
+            <div className="share-mascot">
+              <SpriteMascot variant="coffee" size="large" />
+              <span className="laptop-prop">G</span>
+            </div>
+            <button className="primary-flow-button" type="button" onClick={() => setScene('gallery')}>
+              보낼 사진 고르기
+            </button>
+          </div>
+        )}
+
+        {cameraState === 'active' && scene === 'gallery' && analysis && (
+          <div className="scene gallery-scene">
+            <BackButton onClick={() => setScene('share')} />
+            <h1>함께 보낼 순간을 골라보세요</h1>
+            <div className="share-preview">
+              <img src={selectedShareImage || capturedImage} alt="선택한 공유 사진" />
+              <div><b>{analysis.moodMatch}% GROOVE</b><span>{analysis.trackTitle}</span></div>
+            </div>
+            <div className="gallery-strip">
+              {galleryImages.map((image, index) => (
+                <button
+                  className={image === selectedShareImage ? 'selected' : ''}
+                  type="button"
+                  key={`${image}-${index}`}
+                  onClick={() => setSelectedShareImage(image)}
+                >
+                  <img src={image} alt={`공유 후보 ${index + 1}`} />
+                </button>
+              ))}
+              <label className="add-photo">
+                <input type="file" accept="image/*" multiple onChange={(event) => addGalleryImages(event.target.files)} />
+                <span>＋</span>
+                사진 추가
+              </label>
+            </div>
+            <div className="gallery-actions">
+              <button type="button" onClick={downloadShareCard}>이미지 저장</button>
+              <button type="button" onClick={shareResult}>친구에게 보내기</button>
+            </div>
+            {shareStatus && <p className="share-status">{shareStatus}</p>}
+            <div className="gallery-mascot"><SpriteMascot variant="cozy" size="small" /></div>
           </div>
         )}
 
