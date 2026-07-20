@@ -4,6 +4,7 @@ import basicSsl from '@vitejs/plugin-basic-ssl'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: process.env.NODE_ENV === 'production' ? '/GROOVE-web/' : '/',
   plugins: [react(), basicSsl()],
   server: {
     host: '0.0.0.0',
