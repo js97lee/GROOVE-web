@@ -15,29 +15,29 @@ type AnalysisResult = {
   recommendationReason: string
 }
 
+const asset = (name: string) => `${import.meta.env.BASE_URL}assets/${name}`
+
 function GrooveLogo() {
   return (
-    <div className="groove-logo" aria-label="Groove">
-      <div className="splat" aria-hidden="true">
-        <i className="drop drop-one" />
-        <i className="drop drop-two" />
-        <i className="drop drop-three" />
-        <i className="drop drop-four" />
-        <i className="drop drop-five" />
-        <span>G</span>
-      </div>
-      <strong>Groove</strong>
-      <small>Feel the Groove</small>
-    </div>
+    <img className="groove-logo" src={asset('Groove app icon.png')} alt="Groove — Feel the Groove" />
   )
 }
 
-function Mascot({ large = false }: { large?: boolean }) {
+type MascotVariant = 'coffee' | 'cocktail' | 'listen' | 'cozy'
+
+function Mascot({
+  large = false,
+  variant = 'coffee',
+}: {
+  large?: boolean
+  variant?: MascotVariant
+}) {
   return (
-    <div className={`mascot ${large ? 'large' : ''}`} aria-label="커피를 든 GROOVE 마스코트">
-      <span className="gecko" aria-hidden="true">🦎</span>
-      <span className="coffee" aria-hidden="true">☕</span>
-    </div>
+    <img
+      className={`mascot ${large ? 'large' : ''}`}
+      src={asset(`character-${variant}.png`)}
+      alt="GROOVE 마스코트"
+    />
   )
 }
 
@@ -206,7 +206,7 @@ function App() {
         {cameraState === 'active' && scene === 'live' && (
           <div className="scene live-scene">
             <div className="live-mascot">
-              <Mascot />
+              <Mascot variant={analysisError ? 'coffee' : 'cozy'} />
             </div>
             {analysisError ? (
               <div className="analysis-error">
@@ -224,9 +224,10 @@ function App() {
             <h1>무드매치 결과가 나왔어요!</h1>
             <div className="result-content">
               <div className="result-mascot">
-                <Mascot large />
+                <Mascot large variant="cocktail" />
               </div>
               <article className="mood-card">
+                <img className="vinyl" src={asset('CD-play.png')} alt="" />
                 <div className="cocktail-name">
                   <span>{analysis.cocktailName}</span>
                   <small>칵테일 신뢰도 {analysis.cocktailConfidence}%</small>
@@ -239,6 +240,7 @@ function App() {
                   ))}
                 </div>
                 <div className="track-recommendation">
+                  <Mascot variant="listen" />
                   <b>{analysis.trackTitle}</b>
                   <span>{analysis.trackArtist}</span>
                   <p>{analysis.recommendationReason}</p>
