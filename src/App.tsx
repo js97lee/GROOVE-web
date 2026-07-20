@@ -155,6 +155,10 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image }),
       })
+      const contentType = response.headers.get('content-type') || ''
+      if (!contentType.includes('application/json')) {
+        throw new Error('AI 분석 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.')
+      }
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || '분석에 실패했습니다.')
       setAnalysis(data as AnalysisResult)
@@ -227,7 +231,10 @@ function App() {
                 <Mascot large variant="cocktail" />
               </div>
               <article className="mood-card">
-                <img className="vinyl" src={asset('CD-play.png')} alt="" />
+                <div className="vinyl-player" aria-hidden="true">
+                  <img className="vinyl" src={asset('CD-play.png')} alt="" />
+                  <Mascot variant="listen" />
+                </div>
                 <div className="cocktail-name">
                   <span>{analysis.cocktailName}</span>
                   <small>칵테일 신뢰도 {analysis.cocktailConfidence}%</small>
@@ -240,10 +247,20 @@ function App() {
                   ))}
                 </div>
                 <div className="track-recommendation">
-                  <Mascot variant="listen" />
                   <b>{analysis.trackTitle}</b>
                   <span>{analysis.trackArtist}</span>
                   <p>{analysis.recommendationReason}</p>
+                  <a
+                    className="listen-button"
+                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${analysis.trackTitle} ${analysis.trackArtist}`)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="m10 8 6 4-6 4V8Z" />
+                    </svg>
+                    노래 듣기
+                  </a>
                 </div>
               </article>
             </div>

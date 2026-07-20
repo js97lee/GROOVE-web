@@ -431,15 +431,6 @@
   gap: 2px 9px;
   min-height: 50px;
   margin-top: 14px;
-  padding-left: 58px;
-}
-
-.track-recommendation .mascot {
-  position: absolute;
-  bottom: -4px;
-  left: -12px;
-  width: 68px;
-  filter: drop-shadow(0 6px 5px rgba(0, 0, 0, 0.25));
 }
 
 .track-recommendation b {
@@ -466,14 +457,56 @@
   line-height: 1.35;
 }
 
-.vinyl {
+.listen-button {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  grid-column: 1 / -1;
+  gap: 6px;
+  margin-top: 7px;
+  padding: 7px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(18, 17, 17, 0.52);
+  font-size: clamp(10px, 1.25vw, 14px);
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.listen-button svg {
+  width: 17px;
+  fill: currentColor;
+}
+
+.vinyl-player {
   position: absolute;
-  z-index: -1;
+  z-index: 0;
   top: -12%;
   right: -9%;
   width: clamp(100px, 15vw, 160px);
-  opacity: 0.28;
   pointer-events: none;
+}
+
+.vinyl-player .vinyl {
+  display: block;
+  width: 100%;
+  height: auto;
+  opacity: 0.32;
+  animation: record-spin 6s linear infinite;
+  transform-origin: 47% 49%;
+}
+
+.vinyl-player .mascot {
+  position: absolute;
+  z-index: 2;
+  bottom: -9%;
+  left: -22%;
+  width: 48%;
+  filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.35));
+  transform: rotate(-8deg);
 }
 
 .result-mascot {
@@ -580,6 +613,10 @@
   100% { opacity: 0; }
 }
 
+@keyframes record-spin {
+  to { transform: rotate(360deg); }
+}
+
 @media (orientation: portrait) {
   .xr-frame {
     width: 100vw;
@@ -661,7 +698,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .scene,
-  .flash.visible {
+  .flash.visible,
+  .vinyl-player .vinyl {
     animation: none;
   }
 }
