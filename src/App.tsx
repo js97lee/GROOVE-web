@@ -76,7 +76,7 @@ function StatusBar() {
       <div className="status-left">
         <span>{currentTime}</span>
         <span className="weather" aria-label="맑음">☀︎</span>
-        <span>72°</span>
+        <span>22°C</span>
         <i />
       </div>
       <div className="battery">
@@ -122,6 +122,7 @@ function App() {
   const [galleryImages, setGalleryImages] = useState<string[]>([])
   const [selectedShareImage, setSelectedShareImage] = useState('')
   const [shareStatus, setShareStatus] = useState('')
+  const [isSharing, setIsSharing] = useState(false)
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop())
@@ -307,8 +308,24 @@ function App() {
     }
   }
 
+  const returnToStart = () => {
+    setCapturedImage('')
+    setSelectedShareImage('')
+    setGalleryImages([])
+    setAnalysis(null)
+    setAnalysisError('')
+    setShareStatus('')
+    setScene('intro')
+  }
+
+  const finishShare = (message: string) => {
+    setShareStatus(message)
+    window.setTimeout(returnToStart, 1200)
+  }
+
   const shareResult = async () => {
-    if (!analysis) return
+    if (!analysis || isSharing) return
+    setIsSharing(true)
     setShareStatus('')
     const shareText = `나의 GROOVE 무드는 ${analysis.moodMatch}%! ${analysis.trackTitle} · ${analysis.trackArtist}`
 
@@ -317,16 +334,22 @@ function App() {
       const file = new File([blob], 'groove-mood.png', { type: 'image/png' })
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({ title: 'GROOVE Mood Match', text: shareText, files: [file] })
-        setShareStatus('친구에게 GROOVE를 보냈어요.')
+        finishShare('친구에게 GROOVE를 보냈어요. 처음으로 돌아갈게요.')
         return
       }
 
       await navigator.clipboard?.writeText(shareText)
       await downloadShareCard()
-      setShareStatus('공유 문구를 복사하고 카드를 저장했어요.')
+      finishShare('공유 문구와 카드를 준비했어요. 처음으로 돌아갈게요.')
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return
+      if (error instanceof DOMException && error.name === 'InvalidStateError') {
+        setShareStatus('이전 공유 창이 아직 열려 있어요. 닫은 뒤 다시 시도해 주세요.')
+        return
+      }
       setShareStatus(error instanceof Error ? error.message : '공유하지 못했어요.')
+    } finally {
+      setIsSharing(false)
     }
   }
 
@@ -400,7 +423,16 @@ function App() {
                   <span className="mood-wave wave-three" />
                   <SpriteMascot variant="cozy" size="large" />
                 </div>
-                <div className="matching-progress"><i /></div>
+                <svg className="matching-progress" viewBox="0 0 600 40" aria-hidden="true">
+                  <path
+                    className="wave-track"
+                    d="M0 20 Q15 3 30 20 T60 20 T90 20 T120 20 T150 20 T180 20 T210 20 T240 20 T270 20 T300 20 T330 20 T360 20 T390 20 T420 20 T450 20 T480 20 T510 20 T540 20 T570 20 T600 20"
+                  />
+                  <path
+                    className="wave-progress"
+                    d="M0 20 Q15 3 30 20 T60 20 T90 20 T120 20 T150 20 T180 20 T210 20 T240 20 T270 20 T300 20 T330 20 T360 20 T390 20 T420 20 T450 20 T480 20 T510 20 T540 20 T570 20 T600 20"
+                  />
+                </svg>
                 <small>사진 속 분위기를 음악으로 바꾸는 중</small>
               </>
             )}
@@ -482,9 +514,14 @@ function App() {
             </div>
             <VinylPlayer large />
             <div className="player-mascot"><SpriteMascot variant="listen" size="large" /></div>
-            <a className="youtube-play" href={youtubeUrl} target="_blank" rel="noreferrer">
-              <span>▶</span> YouTube에서 재생
-            </a>
+            <div className="player-actions">
+              <a className="youtube-play" href={youtubeUrl} target="_blank" rel="noreferrer">
+                <span>▶</span> YouTube에서 재생
+              </a>
+              <button className="recommend-friend" type="button" onClick={() => setScene('share')}>
+                친구에게 추천
+              </button>
+            </div>
           </div>
         )}
 
@@ -500,11 +537,15 @@ function App() {
             </div>
             <div className="share-mascot">
               <SpriteMascot variant="coffee" size="large" />
-              <span className="laptop-prop">G</span>
             </div>
-            <button className="primary-flow-button" type="button" onClick={() => setScene('gallery')}>
-              보낼 사진 고르기
-            </button>
+            <div className="share-flow-actions">
+              <button className="primary-flow-button" type="button" onClick={() => setScene('gallery')}>
+                보낼 사진 고르기
+              </button>
+              <button className="reset-flow-button" type="button" onClick={returnToStart}>
+                처음으로
+              </button>
+            </div>
           </div>
         )}
 
@@ -535,7 +576,9 @@ function App() {
             </div>
             <div className="gallery-actions">
               <button type="button" onClick={downloadShareCard}>이미지 저장</button>
-              <button type="button" onClick={shareResult}>친구에게 보내기</button>
+              <button type="button" onClick={shareResult} disabled={isSharing}>
+                {isSharing ? '공유 준비 중…' : '친구에게 보내기'}
+              </button>
             </div>
             {shareStatus && <p className="share-status">{shareStatus}</p>}
             <div className="gallery-mascot"><SpriteMascot variant="cozy" size="small" /></div>

@@ -488,9 +488,9 @@
 .vinyl-player {
   position: absolute;
   z-index: 0;
-  top: -12%;
-  right: -9%;
-  width: clamp(100px, 15vw, 160px);
+  top: 4%;
+  right: 3%;
+  width: clamp(130px, 18vw, 190px);
   pointer-events: none;
 }
 
@@ -498,18 +498,18 @@
   display: block;
   width: 100%;
   height: auto;
-  opacity: 0.32;
+  opacity: 1;
   animation: record-spin 6s linear infinite;
-  transform-origin: 47% 49%;
+  transform-origin: 50% 50%;
 }
 
 .vinyl-player .vinyl-pin {
   position: absolute;
   z-index: 2;
-  top: 1%;
-  right: -15%;
-  width: 82%;
+  inset: 0;
+  width: 92%;
   height: auto;
+  object-fit: contain;
   filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.35));
 }
 
@@ -847,25 +847,29 @@
 
 .matching-progress {
   width: min(54%, 420px);
-  height: 4px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
+  height: 28px;
+  overflow: visible;
 }
 
-.matching-progress i {
-  display: block;
-  width: 42%;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #7e43e8, #cc8cff, #7e43e8);
-  box-shadow: 0 0 14px #a568ff;
-  animation: progress-scan 1.3s ease-in-out infinite alternate;
+.matching-progress path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 5;
 }
 
-@keyframes progress-scan {
-  from { transform: translateX(-15%); }
-  to { transform: translateX(155%); }
+.matching-progress .wave-track {
+  stroke: rgba(255, 255, 255, 0.18);
+}
+
+.matching-progress .wave-progress {
+  stroke: #a864ff;
+  stroke-dasharray: 170 430;
+  filter: drop-shadow(0 0 7px #a864ff);
+  animation: progress-wave 1.7s linear infinite;
+}
+
+@keyframes progress-wave {
+  to { stroke-dashoffset: -600; }
 }
 
 .matching-scene > small {
@@ -1027,7 +1031,7 @@
   top: 23%;
   right: -8%;
   width: clamp(340px, 54vw, 590px);
-  opacity: 0.88;
+  opacity: 1;
 }
 
 .player-mascot {
@@ -1037,13 +1041,21 @@
   left: 24%;
 }
 
-.youtube-play {
+.player-actions {
   position: absolute;
   z-index: 4;
-  right: 18%;
-  bottom: 12%;
+  right: 11%;
+  bottom: 10%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.youtube-play,
+.recommend-friend {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 11px 17px;
   border: 1px solid rgba(255, 255, 255, 0.26);
@@ -1057,6 +1069,10 @@
 
 .youtube-play span {
   color: #ff4d4d;
+}
+
+.recommend-friend {
+  background: linear-gradient(135deg, rgba(139, 77, 232, 0.9), rgba(88, 45, 160, 0.9));
 }
 
 .share-scene {
@@ -1131,16 +1147,29 @@
   transform: perspective(120px) rotateX(-10deg) rotateY(-8deg);
 }
 
-.primary-flow-button {
+.share-flow-actions {
   position: absolute;
   right: 22%;
   bottom: 14%;
+  display: flex;
+  gap: 10px;
+}
+
+.primary-flow-button,
+.reset-flow-button {
   padding: 12px 20px;
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 999px;
   color: #fff;
-  background: linear-gradient(135deg, rgba(128, 68, 225, 0.85), rgba(79, 45, 144, 0.85));
   font-weight: 750;
+}
+
+.primary-flow-button {
+  background: linear-gradient(135deg, rgba(128, 68, 225, 0.85), rgba(79, 45, 144, 0.85));
+}
+
+.reset-flow-button {
+  background: rgba(35, 32, 41, 0.68);
 }
 
 .gallery-scene {
@@ -1312,9 +1341,11 @@
     left: 6%;
   }
 
-  .youtube-play {
+  .player-actions {
     right: 8%;
     bottom: 12%;
+    align-items: flex-end;
+    flex-direction: column;
   }
 
   .share-mascot {
@@ -1322,7 +1353,7 @@
     left: 3%;
   }
 
-  .primary-flow-button {
+  .share-flow-actions {
     right: 8%;
     bottom: 17%;
   }
@@ -1375,7 +1406,7 @@
 @media (prefers-reduced-motion: reduce) {
   .sprite-mascot img,
   .mood-wave,
-  .matching-progress i,
+  .matching-progress .wave-progress,
   .sound-wave i,
   .countdown-scene > span {
     animation: none;
