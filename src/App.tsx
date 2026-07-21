@@ -1,604 +1,217 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 
-type CameraState = 'idle' | 'loading' | 'active' | 'error'
-type Scene =
-  | 'splash'
-  | 'intro'
-  | 'countdown'
-  | 'matching'
-  | 'result'
-  | 'music'
-  | 'player'
-  | 'share'
-  | 'gallery'
-type MascotVariant = 'coffee' | 'cocktail' | 'listen' | 'cozy'
-
-type AnalysisResult = {
-  cocktailName: string
-  cocktailConfidence: number
-  moodMatch: number
-  keywords: [string, string, string]
-  musicCategory: 'Jazz' | 'R&B' | '고전 영화 OST'
-  trackTitle: string
-  trackArtist: string
-  recommendationReason: string
-}
-
 const asset = (name: string) => `${import.meta.env.BASE_URL}assets/${name}`
-const wait = (milliseconds: number) =>
-  new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds))
 
-function GrooveLogo() {
-  return (
-    <img
-      className="groove-logo"
-      src={asset('Groove app icon.png')}
-      alt="Groove — Feel the Groove"
-    />
-  )
+type IconName = 'scan' | 'music' | 'pin' | 'bookmark' | 'share' | 'spark' | 'users' | 'heart' | 'play'
+
+const icons: Record<IconName, React.ReactNode> = {
+  scan: <><path d="M8 3H4a1 1 0 0 0-1 1v4M16 3h4a1 1 0 0 1 1 1v4M8 21H4a1 1 0 0 1-1-1v-4M16 21h4a1 1 0 0 0 1-1v-4"/><circle cx="12" cy="12" r="3"/></>,
+  music: <><path d="M9 18V6l10-2v12M9 10l10-2"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></>,
+  pin: <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>,
+  bookmark: <path d="M6 4h12v17l-6-4-6 4V4Z"/>,
+  share: <><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.5M8.2 13.2l7.6 4.5"/></>,
+  spark: <path d="m12 2 1.5 5.3L19 9l-5.5 1.7L12 16l-1.5-5.3L5 9l5.5-1.7L12 2ZM19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7L19 15Z"/>,
+  users: <><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 4a3 3 0 0 1 0 6M17 14a5 5 0 0 1 4 5v1"/></>,
+  heart: <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/>,
+  play: <path d="m9 7 9 5-9 5V7Z"/>,
 }
 
-function SpriteMascot({
-  variant = 'coffee',
-  size = 'regular',
-}: {
-  variant?: MascotVariant
-  size?: 'regular' | 'large' | 'small'
-}) {
-  return (
-    <span
-      className={`sprite-mascot sprite-${variant} sprite-${size}`}
-      role="img"
-      aria-label="GROOVE 마스코트"
-    >
-      <img src={asset(`sprites/${variant}-sprite.png`)} alt="" />
-    </span>
-  )
+function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
+  return <svg className="icon" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">{icons[name]}</svg>
 }
 
-function StatusBar() {
-  const [now, setNow] = useState(() => new Date())
+const moments = [
+  { title: 'Gin Tonic', place: 'Somewhere Bar', time: '08.20 22:31', mood: 87, tint: 'gold' },
+  { title: 'Negroni', place: 'Union Bar', time: '08.18 21:07', mood: 82, tint: 'rose' },
+  { title: 'Margarita', place: 'Le Chamber', time: '08.15 20:45', mood: 91, tint: 'lime' },
+  { title: 'Highball', place: 'Archive Seongsu', time: '08.12 19:53', mood: 76, tint: 'amber' },
+]
+
+const steps = [
+  ['scan', '칵테일 인식 & 무드 분석', 'XR 글래스가 칵테일의 컬러와 분위기를 실시간으로 인식해요.'],
+  ['music', '음악 추천', 'AI가 무드에 어울리는 음악을 골라 바로 재생해요.'],
+  ['pin', '장소 & 순간 기록', '장소, 시간, 날씨까지 자동으로 기억해요.'],
+  ['bookmark', '나만의 Groove 저장', '모든 경험이 하나의 컬렉션으로 쌓여요.'],
+  ['share', '공유 & 발견', '친구와 공유하고 새로운 Groove를 발견해요.'],
+] as const
+
+function GlassDemo() {
+  const [scanning, setScanning] = useState(false)
+  const [playing, setPlaying] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 1000)
-    return () => window.clearInterval(timer)
-  }, [])
-
-  const currentTime = new Intl.DateTimeFormat('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(now)
+    if (!scanning) return
+    const timer = window.setTimeout(() => setScanning(false), 2100)
+    return () => window.clearTimeout(timer)
+  }, [scanning])
 
   return (
-    <header className="status-bar" aria-label="상태 표시줄">
-      <div className="status-left">
-        <span>{currentTime}</span>
-        <span className="weather" aria-label="맑음">☀︎</span>
-        <span>22°C</span>
-        <i />
+    <div className="glasses-shell" aria-label="GROOVE 스마트 글래스 인터페이스 데모">
+      <div className="bridge" />
+      <div className="lens lens-left">
+        <div className="lens-glow" />
+        <div className="scan-label"><span /> {scanning ? 'ANALYZING...' : 'SCANNING...'}</div>
+        <div className={`focus-frame ${scanning ? 'is-scanning' : ''}`}>
+          <div className="cocktail">
+            <i className="lime lime-one" /><i className="lime lime-two" />
+            <span className="glass-rim" /><span className="glass-body" /><span className="glass-stem" />
+          </div>
+        </div>
+        <div className="drink-copy"><b>Gin Tonic</b><small>Citrus · Fresh · Clean</small></div>
+        <div className="match-copy"><small>MOOD MATCH</small><strong>{scanning ? '…' : '87%'}</strong><span>#상쾌한 &nbsp; #시티팝 &nbsp; #나이트뷰</span></div>
+        <button className="scan-button" onClick={() => setScanning(true)} disabled={scanning}>
+          <Icon name="scan" size={16} /> {scanning ? '분석 중' : '다시 스캔'}
+        </button>
       </div>
-      <div className="battery">
-        <span className="battery-icon"><i /></span>
-        <strong>96%</strong>
+      <div className="lens lens-right">
+        <div className="record-orbit">
+          <img src={asset('CD-Play.png')} alt="" className={playing ? 'spinning' : ''} />
+        </div>
+        <img className="lens-mascot" src={asset('character-listen.png')} alt="음악을 듣는 Groovy" />
+        <div className="mini-tools">
+          <button aria-label="음악"><Icon name="music" size={16} /></button>
+          <button aria-label="위치"><Icon name="pin" size={16} /></button>
+          <button className={saved ? 'active' : ''} onClick={() => setSaved(!saved)} aria-label="저장"><Icon name="bookmark" size={16} /></button>
+        </div>
+        <div className="now-playing">
+          <small>NIGHT RIDE</small><b>Tom Misch</b>
+          <div className="player-row">
+            <button onClick={() => setPlaying(!playing)} aria-label={playing ? '일시정지' : '재생'}>{playing ? 'Ⅱ' : '▶'}</button>
+            <div className={`wave ${playing ? 'active' : ''}`}>{Array.from({ length: 15 }, (_, i) => <i key={i} />)}</div>
+            <span>02:43</span>
+          </div>
+        </div>
       </div>
-    </header>
-  )
-}
-
-function BackButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button className="back-button" type="button" onClick={onClick} aria-label="이전 화면">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="m15 5-7 7 7 7" />
-      </svg>
-    </button>
-  )
-}
-
-function VinylPlayer({ large = false }: { large?: boolean }) {
-  return (
-    <div className={`vinyl-player ${large ? 'vinyl-player-large' : ''}`} aria-hidden="true">
-      <img className="vinyl" src={asset('CD-Play.png')} alt="" />
-      <img className="vinyl-pin" src={asset('CD-pin.png')} alt="" />
     </div>
   )
 }
 
 function App() {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const splashTimerRef = useRef<number | null>(null)
-  const objectUrlsRef = useRef<string[]>([])
-  const [cameraState, setCameraState] = useState<CameraState>('idle')
-  const [scene, setScene] = useState<Scene>('splash')
-  const [countdown, setCountdown] = useState(3)
-  const [errorMessage, setErrorMessage] = useState('')
-  const [flash, setFlash] = useState(false)
-  const [capturedImage, setCapturedImage] = useState('')
-  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
-  const [analysisError, setAnalysisError] = useState('')
-  const [galleryImages, setGalleryImages] = useState<string[]>([])
-  const [selectedShareImage, setSelectedShareImage] = useState('')
-  const [shareStatus, setShareStatus] = useState('')
-  const [isSharing, setIsSharing] = useState(false)
-
-  const stopCamera = useCallback(() => {
-    streamRef.current?.getTracks().forEach((track) => track.stop())
-    streamRef.current = null
-  }, [])
-
-  const startCamera = useCallback(async () => {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setErrorMessage('이 브라우저에서는 카메라를 사용할 수 없어요.')
-      setCameraState('error')
-      return
-    }
-
-    setCameraState('loading')
-    setErrorMessage('')
-    stopCamera()
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
-        audio: false,
-      })
-
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
-
-      setCameraState('active')
-      setScene('splash')
-      splashTimerRef.current = window.setTimeout(() => setScene('intro'), 1800)
-    } catch (error) {
-      const denied =
-        error instanceof DOMException &&
-        (error.name === 'NotAllowedError' || error.name === 'SecurityError')
-      setErrorMessage(
-        denied
-          ? '카메라 권한을 허용해 주세요.'
-          : '카메라를 시작하지 못했어요. 잠시 후 다시 시도해 주세요.',
-      )
-      setCameraState('error')
-    }
-  }, [stopCamera])
-
-  useEffect(() => {
-    const objectUrls = objectUrlsRef.current
-    return () => {
-      stopCamera()
-      if (splashTimerRef.current) window.clearTimeout(splashTimerRef.current)
-      objectUrls.forEach((url) => URL.revokeObjectURL(url))
-    }
-  }, [stopCamera])
-
-  const requestAnalysis = async (image: string) => {
-    const response = await fetch('/api/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image }),
-    })
-    const contentType = response.headers.get('content-type') || ''
-    if (!contentType.includes('application/json')) {
-      throw new Error('AI 분석 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.')
-    }
-    const data = await response.json()
-    if (!response.ok) throw new Error(data.error || '분석에 실패했습니다.')
-    return data as AnalysisResult
-  }
-
-  const captureAndAnalyze = async () => {
-    const video = videoRef.current
-    if (!video || !video.videoWidth || !video.videoHeight) {
-      setAnalysisError('카메라 화면이 준비되지 않았어요. 다시 시도해 주세요.')
-      setScene('matching')
-      return
-    }
-
-    const canvas = document.createElement('canvas')
-    const maxWidth = 1280
-    const scale = Math.min(1, maxWidth / video.videoWidth)
-    canvas.width = Math.round(video.videoWidth * scale)
-    canvas.height = Math.round(video.videoHeight * scale)
-    const context = canvas.getContext('2d')
-    if (!context) return
-
-    context.drawImage(video, 0, 0, canvas.width, canvas.height)
-    const image = canvas.toDataURL('image/jpeg', 0.82)
-    setCapturedImage(image)
-    setSelectedShareImage(image)
-    setGalleryImages([image])
-    setAnalysis(null)
-    setAnalysisError('')
-    setFlash(true)
-    setScene('matching')
-    window.setTimeout(() => setFlash(false), 420)
-
-    try {
-      const [result] = await Promise.all([requestAnalysis(image), wait(3000)])
-      setAnalysis(result)
-      setScene('result')
-    } catch (error) {
-      setAnalysisError(error instanceof Error ? error.message : '분석에 실패했습니다.')
-    }
-  }
-
-  const startCountdown = async () => {
-    setCapturedImage('')
-    setAnalysisError('')
-    setScene('countdown')
-    for (const number of [3, 2, 1]) {
-      setCountdown(number)
-      await wait(760)
-    }
-    await captureAndAnalyze()
-  }
-
-  const retryCapture = () => {
-    setCapturedImage('')
-    setAnalysisError('')
-    setScene('intro')
-  }
-
-  const loadImage = (source: string) =>
-    new Promise<HTMLImageElement>((resolve, reject) => {
-      const image = new Image()
-      image.onload = () => resolve(image)
-      image.onerror = reject
-      image.src = source
-    })
-
-  const createShareCard = async () => {
-    if (!analysis || !selectedShareImage) throw new Error('공유할 결과가 없습니다.')
-    const source = await loadImage(selectedShareImage)
-    const canvas = document.createElement('canvas')
-    canvas.width = 1080
-    canvas.height = 1080
-    const context = canvas.getContext('2d')
-    if (!context) throw new Error('공유 이미지를 만들 수 없습니다.')
-
-    const scale = Math.max(canvas.width / source.width, canvas.height / source.height)
-    const width = source.width * scale
-    const height = source.height * scale
-    context.drawImage(source, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height)
-    const gradient = context.createLinearGradient(0, 250, 0, 1080)
-    gradient.addColorStop(0, 'rgba(8, 6, 10, 0.05)')
-    gradient.addColorStop(1, 'rgba(8, 6, 10, 0.9)')
-    context.fillStyle = gradient
-    context.fillRect(0, 0, 1080, 1080)
-
-    context.fillStyle = '#ffffff'
-    context.font = '700 42px "NanumSquare Neo", sans-serif'
-    context.fillText('GROOVE MOOD MATCH', 76, 730)
-    context.fillStyle = '#a873ff'
-    context.font = '800 126px "NanumSquare Neo", sans-serif'
-    context.fillText(`${analysis.moodMatch}%`, 70, 865)
-    context.fillStyle = '#ffffff'
-    context.font = '600 36px "NanumSquare Neo", sans-serif'
-    context.fillText(analysis.keywords.map((word) => `#${word.replace(/^#/, '')}`).join('  '), 76, 930)
-    context.font = '600 30px "NanumSquare Neo", sans-serif'
-    context.fillText(`${analysis.trackTitle} · ${analysis.trackArtist}`, 76, 995)
-
-    return new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('이미지 생성 실패'))), 'image/png')
-    })
-  }
-
-  const downloadShareCard = async () => {
-    try {
-      const blob = await createShareCard()
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = 'groove-mood.png'
-      link.click()
-      URL.revokeObjectURL(url)
-      setShareStatus('공유 카드를 저장했어요.')
-    } catch (error) {
-      setShareStatus(error instanceof Error ? error.message : '저장하지 못했어요.')
-    }
-  }
-
-  const returnToStart = () => {
-    setCapturedImage('')
-    setSelectedShareImage('')
-    setGalleryImages([])
-    setAnalysis(null)
-    setAnalysisError('')
-    setShareStatus('')
-    setScene('intro')
-  }
-
-  const finishShare = (message: string) => {
-    setShareStatus(message)
-    window.setTimeout(returnToStart, 1200)
-  }
-
-  const shareResult = async () => {
-    if (!analysis || isSharing) return
-    setIsSharing(true)
-    setShareStatus('')
-    const shareText = `나의 GROOVE 무드는 ${analysis.moodMatch}%! ${analysis.trackTitle} · ${analysis.trackArtist}`
-
-    try {
-      const blob = await createShareCard()
-      const file = new File([blob], 'groove-mood.png', { type: 'image/png' })
-      if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: 'GROOVE Mood Match', text: shareText, files: [file] })
-        finishShare('친구에게 GROOVE를 보냈어요. 처음으로 돌아갈게요.')
-        return
-      }
-
-      await navigator.clipboard?.writeText(shareText)
-      await downloadShareCard()
-      finishShare('공유 문구와 카드를 준비했어요. 처음으로 돌아갈게요.')
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') return
-      if (error instanceof DOMException && error.name === 'InvalidStateError') {
-        setShareStatus('이전 공유 창이 아직 열려 있어요. 닫은 뒤 다시 시도해 주세요.')
-        return
-      }
-      setShareStatus(error instanceof Error ? error.message : '공유하지 못했어요.')
-    } finally {
-      setIsSharing(false)
-    }
-  }
-
-  const addGalleryImages = (files: FileList | null) => {
-    if (!files?.length) return
-    const urls = Array.from(files).map((file) => URL.createObjectURL(file))
-    objectUrlsRef.current.push(...urls)
-    setGalleryImages((current) => [...current, ...urls])
-    setSelectedShareImage(urls[0])
-  }
-
-  const youtubeUrl = analysis
-    ? `https://www.youtube.com/results?search_query=${encodeURIComponent(
-        `${analysis.trackTitle} ${analysis.trackArtist}`,
-      )}`
-    : '#'
-
-  const showCapturedFrame = capturedImage && !['splash', 'intro', 'countdown'].includes(scene)
+  const [activeMoment, setActiveMoment] = useState(0)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   return (
-    <main className="page">
-      <section className={`xr-frame scene-${scene}`}>
-        <video ref={videoRef} className="camera-feed" muted playsInline aria-label="실시간 카메라 화면" />
-        {showCapturedFrame && <img className="captured-frame" src={capturedImage} alt="촬영된 칵테일" />}
-        <div className="camera-placeholder" aria-hidden="true" />
-        <div className="camera-filter" aria-hidden="true" />
-        <StatusBar />
+    <main>
+      <nav className="top-nav">
+        <a className="brand" href="#top" aria-label="GROOVE 홈">
+          <span className="brand-mark"><i /><i /><i /><i /><i /></span>
+          <span>Groove<small>Feel the Groove.</small></span>
+        </a>
+        <button className="menu-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="메뉴 열기">☰</button>
+        <div className={menuOpen ? 'nav-links open' : 'nav-links'}>
+          <a href="#experience" onClick={() => setMenuOpen(false)}>Experience</a>
+          <a href="#how" onClick={() => setMenuOpen(false)}>How it works</a>
+          <a href="#collection" onClick={() => setMenuOpen(false)}>Collection</a>
+          <a className="nav-cta" href="#demo" onClick={() => setMenuOpen(false)}>Try GROOVE <span>↗</span></a>
+        </div>
+      </nav>
 
-        {cameraState === 'active' && scene === 'splash' && (
-          <div className="scene splash-scene">
-            <GrooveLogo />
-            <h1>FILL THE GROOVE</h1>
+      <header className="hero" id="top">
+        <div className="hero-noise" />
+        <div className="hero-copy">
+          <span className="eyebrow"><i /> XR MUSIC EXPERIENCE</span>
+          <h1>한 잔의 분위기가<br /><em>음악이 되는 순간.</em></h1>
+          <p>GROOVE는 스마트 글래스로 눈앞의 칵테일과 공간을 읽고,<br />지금 이 순간에 가장 어울리는 음악을 들려줍니다.</p>
+          <div className="hero-actions">
+            <a className="primary-button" href="#demo">경험 시작하기 <span>→</span></a>
+            <a className="text-button" href="#how"><i>▶</i> 작동 방식 보기</a>
           </div>
-        )}
-
-        {cameraState === 'active' && scene === 'intro' && (
-          <div className="scene intro-scene">
-            <h1>오늘의 감성을 한 컷 담아보세요</h1>
-            <SpriteMascot variant="coffee" size="large" />
-            <button className="shoot-button" type="button" onClick={startCountdown}>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M7.5 7 9 4.8h6L16.5 7H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2.5Z" />
-                <circle cx="12" cy="13" r="3.5" />
-              </svg>
-              눌러서 촬영
-            </button>
+          <div className="trust-row">
+            <span><b>AI</b> 실시간 무드 분석</span><span><b>XR</b> 핸즈프리 경험</span><span><b>∞</b> 순간 아카이빙</span>
           </div>
-        )}
+        </div>
+        <div className="hero-visual" id="demo">
+          <div className="orb orb-one" /><div className="orb orb-two" />
+          <GlassDemo />
+          <span className="float-tag tag-one"><Icon name="spark" size={14} /> MOOD 87%</span>
+          <span className="float-tag tag-two"><Icon name="music" size={14} /> NOW PLAYING</span>
+        </div>
+      </header>
 
-        {cameraState === 'active' && scene === 'countdown' && (
-          <div className="scene countdown-scene">
-            <span key={countdown}>{countdown}</span>
-            <p>잠시 그대로 있어주세요</p>
-          </div>
-        )}
-
-        {cameraState === 'active' && scene === 'matching' && (
-          <div className="scene matching-scene">
-            {analysisError ? (
-              <div className="analysis-error">
-                <SpriteMascot variant="coffee" size="large" />
-                <p>{analysisError}</p>
-                <button type="button" onClick={retryCapture}>다시 촬영</button>
-              </div>
-            ) : (
-              <>
-                <p>NOW GROOVING...</p>
-                <div className="matching-visual">
-                  <span className="mood-wave wave-one" />
-                  <span className="mood-wave wave-two" />
-                  <span className="mood-wave wave-three" />
-                  <SpriteMascot variant="cozy" size="large" />
-                </div>
-                <svg className="matching-progress" viewBox="0 0 600 40" aria-hidden="true">
-                  <path
-                    className="wave-track"
-                    d="M0 20 Q15 3 30 20 T60 20 T90 20 T120 20 T150 20 T180 20 T210 20 T240 20 T270 20 T300 20 T330 20 T360 20 T390 20 T420 20 T450 20 T480 20 T510 20 T540 20 T570 20 T600 20"
-                  />
-                  <path
-                    className="wave-progress"
-                    d="M0 20 Q15 3 30 20 T60 20 T90 20 T120 20 T150 20 T180 20 T210 20 T240 20 T270 20 T300 20 T330 20 T360 20 T390 20 T420 20 T450 20 T480 20 T510 20 T540 20 T570 20 T600 20"
-                  />
-                </svg>
-                <small>사진 속 분위기를 음악으로 바꾸는 중</small>
-              </>
-            )}
-          </div>
-        )}
-
-        {cameraState === 'active' && scene === 'result' && analysis && (
-          <div className="scene result-scene">
-            <h1>무드매치 결과가 나왔어요!</h1>
-            <div className="result-content">
-              <div className="result-mascot"><SpriteMascot variant="cocktail" size="large" /></div>
-              <article className="mood-card">
-                <VinylPlayer />
-                {analysis.cocktailName !== '칵테일 판별 불가' && (
-                  <div className="cocktail-name">
-                    <span>{analysis.cocktailName}</span>
-                    <small>칵테일 신뢰도 {analysis.cocktailConfidence}%</small>
-                  </div>
-                )}
-                <h2>MOOD MATCH</h2>
-                <strong>{analysis.moodMatch}%</strong>
-                <div className="mood-tags">
-                  {analysis.keywords.map((keyword) => (
-                    <span key={keyword}>#{keyword.replace(/^#/, '')}</span>
-                  ))}
-                </div>
-                <div className="track-recommendation">
-                  <b>{analysis.trackTitle}</b>
-                  <span>{analysis.trackArtist}</span>
-                  <p>{analysis.recommendationReason}</p>
-                  <button className="listen-button" type="button" onClick={() => setScene('music')}>
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 8 6 4-6 4V8Z" /></svg>
-                    노래 듣기
-                  </button>
-                </div>
-              </article>
-            </div>
-            <nav className="tool-rail" aria-label="결과 도구">
-              <button type="button" aria-label="음악" onClick={() => setScene('music')}>
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M9 18V6l10-2v12M9 10l10-2" /><circle cx="6" cy="18" r="3" /><circle cx="16" cy="16" r="3" />
-                </svg>
-              </button>
-              <button type="button" aria-label="위치">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.1 6-11a6 6 0 1 0-12 0c0 5.9 6 11 6 11Z" /><circle cx="12" cy="10" r="2" /></svg>
-              </button>
-              <button type="button" aria-label="저장" onClick={downloadShareCard}>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v17l-6-4-6 4V4Z" /></svg>
-              </button>
-              <button type="button" aria-label="공유" onClick={() => setScene('share')}>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4M6 11H4v9h16v-9h-2" /></svg>
-              </button>
-            </nav>
-          </div>
-        )}
-
-        {cameraState === 'active' && scene === 'music' && analysis && (
-          <div className="scene music-scene">
-            <BackButton onClick={() => setScene('result')} />
-            <h1>오늘의 GROOVE 음악을 추천해요</h1>
-            <SpriteMascot variant="listen" size="large" />
-            <button className="music-card" type="button" onClick={() => setScene('player')}>
-              <span className="album-dot" />
-              <span><b>{analysis.trackTitle}</b><small>{analysis.trackArtist}</small></span>
-              <i>›</i>
-            </button>
-            <div className="sound-wave" aria-hidden="true">
-              {Array.from({ length: 20 }, (_, index) => <i key={index} />)}
-            </div>
-          </div>
-        )}
-
-        {cameraState === 'active' && scene === 'player' && analysis && (
-          <div className="scene player-scene">
-            <BackButton onClick={() => setScene('music')} />
-            <div className="now-playing-pill">
-              <span className="album-dot" />
-              <span><b>{analysis.trackTitle}</b><small>{analysis.trackArtist}</small></span>
-            </div>
-            <VinylPlayer large />
-            <div className="player-mascot"><SpriteMascot variant="listen" size="large" /></div>
-            <div className="player-actions">
-              <a className="youtube-play" href={youtubeUrl} target="_blank" rel="noreferrer">
-                <span>▶</span> YouTube에서 재생
-              </a>
-              <button className="recommend-friend" type="button" onClick={() => setScene('share')}>
-                친구에게 추천
-              </button>
-            </div>
-          </div>
-        )}
-
-        {cameraState === 'active' && scene === 'share' && analysis && (
-          <div className="scene share-scene">
-            <BackButton onClick={() => setScene('result')} />
-            <h1>친구에게 GROOVE 하기</h1>
-            <div className="share-summary">
-              <span>MOOD MATCH</span>
-              <strong>{analysis.moodMatch}%</strong>
-              <div>{analysis.keywords.map((word) => <i key={word}>#{word.replace(/^#/, '')}</i>)}</div>
-              <p>{analysis.trackTitle} · {analysis.trackArtist}</p>
-            </div>
-            <div className="share-mascot">
-              <SpriteMascot variant="coffee" size="large" />
-            </div>
-            <div className="share-flow-actions">
-              <button className="primary-flow-button" type="button" onClick={() => setScene('gallery')}>
-                보낼 사진 고르기
-              </button>
-              <button className="reset-flow-button" type="button" onClick={returnToStart}>
-                처음으로
-              </button>
-            </div>
-          </div>
-        )}
-
-        {cameraState === 'active' && scene === 'gallery' && analysis && (
-          <div className="scene gallery-scene">
-            <BackButton onClick={() => setScene('share')} />
-            <h1>함께 보낼 순간을 골라보세요</h1>
-            <div className="share-preview">
-              <img src={selectedShareImage || capturedImage} alt="선택한 공유 사진" />
-              <div><b>{analysis.moodMatch}% GROOVE</b><span>{analysis.trackTitle}</span></div>
-            </div>
-            <div className="gallery-strip">
-              {galleryImages.map((image, index) => (
-                <button
-                  className={image === selectedShareImage ? 'selected' : ''}
-                  type="button"
-                  key={`${image}-${index}`}
-                  onClick={() => setSelectedShareImage(image)}
-                >
-                  <img src={image} alt={`공유 후보 ${index + 1}`} />
-                </button>
-              ))}
-              <label className="add-photo">
-                <input type="file" accept="image/*" multiple onChange={(event) => addGalleryImages(event.target.files)} />
-                <span>＋</span>
-                사진 추가
-              </label>
-            </div>
-            <div className="gallery-actions">
-              <button type="button" onClick={downloadShareCard}>이미지 저장</button>
-              <button type="button" onClick={shareResult} disabled={isSharing}>
-                {isSharing ? '공유 준비 중…' : '친구에게 보내기'}
-              </button>
-            </div>
-            {shareStatus && <p className="share-status">{shareStatus}</p>}
-            <div className="gallery-mascot"><SpriteMascot variant="cozy" size="small" /></div>
-          </div>
-        )}
-
-        {cameraState !== 'active' && (
-          <div className="camera-gate">
-            <GrooveLogo />
-            <h1>FILL THE GROOVE</h1>
-            <p>{errorMessage || '카메라 위에서 오늘의 감성을 기록해 보세요.'}</p>
-            <button type="button" onClick={startCamera} disabled={cameraState === 'loading'}>
-              {cameraState === 'loading' ? '카메라 연결 중…' : cameraState === 'error' ? '다시 시도' : '카메라 시작'}
-            </button>
-            {!window.isSecureContext && <small>카메라 사용을 위해 HTTPS 연결이 필요합니다.</small>}
-          </div>
-        )}
-
-        <div className={`flash ${flash ? 'visible' : ''}`} aria-hidden="true" />
+      <section className="media-section" id="showcase" aria-label="GROOVE 체험 영상">
+        <img
+          src={asset('showcase.jpg')}
+          alt="스마트 글래스로 GROOVE를 경험하는 모습"
+        />
+        <div className="media-overlay">
+          <button className="media-play" type="button" aria-label="영상 재생 (준비 중)">
+            <span>▶</span>
+          </button>
+          <p>곧 영상으로 만나요</p>
+        </div>
       </section>
+
+      <section className="intro-band" id="experience">
+        <div className="section-kicker">BEYOND WHAT YOU SEE</div>
+        <h2>보이는 것 너머의 감각을<br /><em>음악으로 연결합니다.</em></h2>
+        <p>라테일 인식 & 무드 분석부터 음악 추천, 장소 기록, 친구와의 공유까지.<br />GROOVE는 평범한 밤을 오래 기억될 감각적인 경험으로 바꿉니다.</p>
+        <div className="feature-cards">
+          <article><span>01</span><Icon name="scan" size={28} /><h3>칵테일 인식</h3><p>컬러, 재료, 분위기를<br />실시간으로 읽어요.</p></article>
+          <article><span>02</span><Icon name="spark" size={28} /><h3>AI 무드 매칭</h3><p>공간의 온도와 취향을<br />하나의 무드로 분석해요.</p></article>
+          <article><span>03</span><Icon name="music" size={28} /><h3>음악 큐레이션</h3><p>그 순간을 완성하는<br />단 한 곡을 추천해요.</p></article>
+          <article><span>04</span><Icon name="users" size={28} /><h3>함께하는 발견</h3><p>친구의 Groove에서<br />새로운 취향을 만나요.</p></article>
+        </div>
+      </section>
+
+      <section className="how-section" id="how">
+        <div className="how-heading">
+          <span className="section-kicker">HOW IT WORKS</span>
+          <h2>바라보는 것만으로<br />당신의 Groove가 시작돼요.</h2>
+        </div>
+        <div className="steps">
+          {steps.map(([icon, title, copy], index) => (
+            <article key={title}>
+              <div className="step-icon"><Icon name={icon} size={22} /><span>0{index + 1}</span></div>
+              <h3>{title}</h3><p>{copy}</p>
+              {index < steps.length - 1 && <i className="step-line" />}
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="collection-section" id="collection">
+        <div className="collection-copy">
+          <span className="section-kicker">MY GROOVE COLLECTION</span>
+          <h2>당신이 사랑한 밤은<br />하나의 플레이리스트가 됩니다.</h2>
+          <p>장소와 시간, 음악과 기분까지 함께 저장되는<br />나만의 감각 아카이브를 만들어보세요.</p>
+          <div className="collection-stats"><span><b>24</b> GROOVES</span><span><b>18</b> PLACES</span><span><b>7</b> FRIENDS</span></div>
+        </div>
+        <div className="moment-browser">
+          <div className={`moment-focus ${moments[activeMoment].tint}`}>
+            <div className="focus-top"><span>{moments[activeMoment].place}</span><Icon name="bookmark" size={18} /></div>
+            <div className="mini-cocktail"><i /><i /></div>
+            <div className="focus-bottom">
+              <span>MOOD MATCH</span><strong>{moments[activeMoment].mood}%</strong>
+              <h3>{moments[activeMoment].title}</h3><small>{moments[activeMoment].time}</small>
+            </div>
+          </div>
+          <div className="moment-list">
+            {moments.map((moment, index) => (
+              <button className={activeMoment === index ? 'active' : ''} onClick={() => setActiveMoment(index)} key={moment.title}>
+                <span className={`moment-thumb ${moment.tint}`}><i /></span>
+                <span><b>{moment.title}</b><small>{moment.place}</small></span>
+                <em>{moment.mood}%</em>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="share-section">
+        <img src={asset('character-cocktail.png')} alt="칵테일을 든 GROOVE 마스코트 Groovy" />
+        <div><span className="section-kicker">SHARE THE GROOVE</span><h2>좋은 순간은<br />함께할수록 더 선명해지니까.</h2></div>
+        <div className="share-bubbles"><span>#NightRide</span><span>#GinTonic</span><span>#Seongsu</span></div>
+        <a href="#top" className="primary-button">나의 Groove 시작하기 <span>↗</span></a>
+      </section>
+
+      <footer>
+        <a className="brand footer-brand" href="#top"><span className="brand-mark"><i /><i /><i /><i /><i /></span><span>Groove<small>Feel the Groove.</small></span></a>
+        <p>AI가 읽고, 음악이 기억하는 당신의 순간.</p>
+        <div><a href="#experience">Experience</a><a href="#how">How it works</a><a href="#collection">Collection</a></div>
+        <small>© 2026 GROOVE XR. All rights reserved.</small>
+      </footer>
     </main>
   )
 }
