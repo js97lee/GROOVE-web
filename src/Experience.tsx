@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  pickCatalogTrack,
-  youtubeEmbedSrc,
-  youtubeWatchUrl,
-  type CatalogTrack,
-  type MusicCategory,
-} from './musicCatalog'
+import { YouTubePlayer } from './YouTubePlayer'
 import './Experience.css'
 
 type CameraState = 'idle' | 'loading' | 'active' | 'error'
@@ -26,10 +20,11 @@ type AnalysisResult = {
   cocktailConfidence: number
   moodMatch: number
   keywords: [string, string, string]
-  musicCategory: MusicCategory
+  musicCategory: 'Jazz' | 'R&B' | '고전 영화 OST'
   trackTitle: string
   trackArtist: string
   recommendationReason: string
+  videoId: string
 }
 
 const asset = (name: string) => `${import.meta.env.BASE_URL}assets/${name}`
@@ -37,30 +32,6 @@ const wait = (milliseconds: number) =>
   new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds))
 
 const musicScenes: Scene[] = ['result', 'music', 'player', 'share', 'gallery']
-
-function GrooveMusic({
-  track,
-  muted,
-  active,
-}: {
-  track: CatalogTrack | null
-  muted: boolean
-  active: boolean
-}) {
-  if (!track || !active) return null
-
-  return (
-    <iframe
-      key={`${track.videoId}-${muted ? 'mute' : 'sound'}`}
-      className="groove-music-frame"
-      title={`${track.title} — ${track.artist}`}
-      src={youtubeEmbedSrc(track.videoId, muted)}
-      allow="autoplay; encrypted-media; picture-in-picture"
-      allowFullScreen
-      tabIndex={-1}
-    />
-  )
-}
 
 function GrooveLogo() {
   return (
@@ -156,7 +127,6 @@ function Experience() {
   const [selectedShareImage, setSelectedShareImage] = useState('')
   const [shareStatus, setShareStatus] = useState('')
   const [isSharing, setIsSharing] = useState(false)
-  const [catalogTrack, setCatalogTrack] = useState<CatalogTrack | null>(null)
   const [musicMuted, setMusicMuted] = useState(true)
 
   useEffect(() => {
@@ -266,7 +236,6 @@ function Experience() {
     setSelectedShareImage(image)
     setGalleryImages([image])
     setAnalysis(null)
-    setCatalogTrack(null)
     setMusicMuted(true)
     setAnalysisError('')
     setFlash(true)
@@ -275,13 +244,7 @@ function Experience() {
 
     try {
       const [result] = await Promise.all([requestAnalysis(image), wait(3000)])
-      const track = pickCatalogTrack(result.musicCategory, result.moodMatch)
-      setCatalogTrack(track)
-      setAnalysis({
-        ...result,
-        trackTitle: track.title,
-        trackArtist: track.artist,
-      })
+      setAnalysis(result)
       setMusicMuted(true)
       setScene('result')
     } catch (error) {
@@ -370,7 +333,6 @@ function Experience() {
     setSelectedShareImage('')
     setGalleryImages([])
     setAnalysis(null)
-    setCatalogTrack(null)
     setMusicMuted(true)
     setAnalysisError('')
     setShareStatus('')
@@ -420,26 +382,30 @@ function Experience() {
     setSelectedShareImage(urls[0])
   }
 
-  const youtubeUrl = catalogTrack
-    ? youtubeWatchUrl(catalogTrack.videoId)
+  const youtubeUrl = analysis?.videoId
+    ? `https://www.youtube.com/watch?v=${analysis.videoId}`
     : analysis
       ? `https://www.youtube.com/results?search_query=${encodeURIComponent(
           `${analysis.trackTitle} ${analysis.trackArtist}`,
         )}`
       : '#'
 
-  const musicActive = Boolean(catalogTrack && musicScenes.includes(scene))
+  const musicActive = Boolean(analysis?.videoId && musicScenes.includes(scene))
   const nowPlayingLabel = useMemo(() => {
-    if (!catalogTrack) return ''
-    return `${catalogTrack.title} · ${catalogTrack.artist}`
-  }, [catalogTrack])
+    if (!analysis) return ''
+    return `${analysis.trackTitle} · ${analysis.trackArtist}`
+  }, [analysis])
 
   const showCapturedFrame = capturedImage && !['splash', 'intro', 'countdown'].includes(scene)
 
   return (
     <main className="page">
       <section className={`xr-frame scene-${scene}`}>
-        <GrooveMusic track={catalogTrack} muted={musicMuted} active={musicActive} />
+        <YouTubePlayer
+          videoId={analysis?.videoId ?? null}
+          muted={musicMuted}
+          active={musicActive}
+        />
         <video ref={videoRef} className="camera-feed" muted playsInline aria-label="실시간 카메라 화면" />
         {showCapturedFrame && <img className="captured-frame" src={capturedImage} alt="촬영된 칵테일" />}
         <div className="camera-placeholder" aria-hidden="true" />

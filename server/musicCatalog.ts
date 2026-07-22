@@ -26,21 +26,3 @@ export function pickCatalogTrack(category: MusicCategory, seed = 0): CatalogTrac
   const list = musicCatalog[category] ?? musicCatalog.Jazz
   return list[Math.abs(Math.round(seed)) % list.length]
 }
-
-export function youtubeEmbedSrc(videoId: string, muted: boolean) {
-  const params = new URLSearchParams({
-    autoplay: '1',
-    mute: muted ? '1' : '0',
-    controls: '0',
-    loop: '1',
-    playlist: videoId,
-    playsinline: '1',
-    rel: '0',
-    modestbranding: '1',
-  })
-  return `https://www.youtube.com/embed/${videoId}?${params.toString()}`
-}
-
-export function youtubeWatchUrl(videoId: string) {
-  return `https://www.youtube.com/watch?v=${videoId}`
-}

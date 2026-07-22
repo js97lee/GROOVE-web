@@ -504,14 +504,27 @@
   font-size: clamp(9px, 1.1vw, 12px);
 }
 
-.groove-music-frame {
+.groove-music-shell {
   position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-  border: 0;
+  z-index: 3;
+  right: 18px;
+  bottom: 18px;
+  width: 168px;
+  height: 94px;
   overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 14px;
+  background: #000;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  opacity: 0.92;
+  pointer-events: none;
+}
+
+.groove-music-host,
+.groove-music-host iframe {
+  width: 168px !important;
+  height: 94px !important;
+  border: 0;
 }
 
 .now-playing-caption {

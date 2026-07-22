@@ -1,6 +1,20 @@
 import OpenAI from 'openai'
+import { resolveYouTubeTrack } from './youtube.js'
+import type { MusicCategory } from './musicCatalog.js'
 
-export async function analyzeCocktailImage(image: string) {
+type AnalysisPayload = {
+  cocktailName: string
+  cocktailConfidence: number
+  moodMatch: number
+  keywords: [string, string, string]
+  musicCategory: MusicCategory
+  trackTitle: string
+  trackArtist: string
+  recommendationReason: string
+  videoId: string
+}
+
+export async function analyzeCocktailImage(image: string): Promise<AnalysisPayload> {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error('OPENAI_API_KEY가 설정되지 않았습니다.')
   }
@@ -74,5 +88,18 @@ export async function analyzeCocktailImage(image: string) {
     max_output_tokens: 500,
   })
 
-  return JSON.parse(result.output_text)
+  const analysis = JSON.parse(result.output_text) as Omit<AnalysisPayload, 'videoId'>
+  const youtube = await resolveYouTubeTrack(
+    analysis.musicCategory,
+    analysis.trackTitle,
+    analysis.trackArtist,
+    analysis.moodMatch,
+  )
+
+  return {
+    ...analysis,
+    trackTitle: youtube.title,
+    trackArtist: youtube.artist,
+    videoId: youtube.videoId,
+  }
 }
