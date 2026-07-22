@@ -152,7 +152,8 @@ html { scroll-behavior: smooth; }
   background: #0a0908;
 }
 
-.media-section > img {
+.media-section > img,
+.media-section > .media-video {
   display: block;
   width: 100%;
   height: 100%;
