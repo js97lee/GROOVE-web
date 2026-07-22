@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import './Landing.css'
 
 const asset = (name: string) =>
@@ -92,31 +92,15 @@ function GlassDemo() {
 function Landing() {
   const [activeMoment, setActiveMoment] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [videoMuted, setVideoMuted] = useState(true)
-  const showcaseRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
-    const html = document.documentElement
     const { body } = document
-    const prevHtml = html.style.overflow
-    const prevBody = body.style.overflowY
-    html.style.overflow = 'auto'
-    body.style.overflowY = 'auto'
-    window.scrollTo(0, 0)
+    const prevOverflow = body.style.overflow
+    body.style.overflow = 'hidden'
     return () => {
-      html.style.overflow = prevHtml
-      body.style.overflowY = prevBody
+      body.style.overflow = prevOverflow
     }
   }, [])
-
-  const toggleShowcaseSound = () => {
-    const video = showcaseRef.current
-    if (!video) return
-    const nextMuted = !video.muted
-    video.muted = nextMuted
-    setVideoMuted(nextMuted)
-    void video.play()
-  }
 
   return (
     <main className="landing-page">
@@ -158,7 +142,6 @@ function Landing() {
 
       <section className="media-section" id="showcase" aria-label="GROOVE 체험 영상">
         <video
-          ref={showcaseRef}
           className="media-video"
           src={asset('Groove-영상.mp4')}
           poster={asset('showcase.jpg')}
@@ -168,17 +151,6 @@ function Landing() {
           playsInline
           preload="metadata"
         />
-        <div className="media-overlay">
-          <button
-            className="media-play"
-            type="button"
-            onClick={toggleShowcaseSound}
-            aria-label={videoMuted ? '영상 소리 켜기' : '영상 음소거'}
-          >
-            <span>{videoMuted ? '▶' : 'Ⅱ'}</span>
-          </button>
-          <p>{videoMuted ? '탭해서 소리를 켜보세요' : '재생 중'}</p>
-        </div>
       </section>
 
       <section className="intro-band" id="experience">
