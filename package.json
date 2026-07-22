@@ -17,7 +17,8 @@
     "express": "^5.2.1",
     "openai": "^6.48.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "react-router-dom": "^7.18.1"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
