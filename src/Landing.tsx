@@ -117,7 +117,7 @@ function Landing() {
         <div className="hero-noise" />
         <div className="hero-copy">
           <span className="eyebrow"><i /> XR MUSIC EXPERIENCE</span>
-          <h1>한 잔의 분위기가<br /><em>음악이 되는 순간.</em></h1>
+          <h1>한 잔의 분위기가<br /><em>음악이 되는 순간</em></h1>
           <p>GROOVE는 스마트 글래스로 눈앞의 칵테일과 공간을 읽고,<br />지금 이 순간에 가장 어울리는 음악을 들려줍니다.</p>
           <div className="hero-actions">
             <Link className="primary-button" to="/">경험 시작하기 <span>→</span></Link>
