@@ -95,20 +95,14 @@ function Landing() {
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
-    const { body } = document
-    const prevOverflow = body.style.overflow
-    body.style.overflow = 'hidden'
-    return () => {
-      body.style.overflow = prevOverflow
-    }
+    window.scrollTo(0, 0)
   }, [])
 
   return (
     <main className="landing-page">
       <nav className="top-nav">
         <a className="brand" href="#top" aria-label="GROOVE 홈">
-          <span className="brand-mark"><i /><i /><i /><i /><i /></span>
-          <span>Groove<small>Feel the Groove.</small></span>
+          <img className="brand-logo" src={asset('groove-logo.png')} alt="Groove — Feel the Groove" />
         </a>
         <button className="menu-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="메뉴 열기">☰</button>
         <div className={menuOpen ? 'nav-links open' : 'nav-links'}>
@@ -217,7 +211,9 @@ function Landing() {
       </section>
 
       <footer>
-        <a className="brand footer-brand" href="#top"><span className="brand-mark"><i /><i /><i /><i /><i /></span><span>Groove<small>Feel the Groove.</small></span></a>
+        <a className="brand footer-brand" href="#top" aria-label="GROOVE 홈">
+          <img className="brand-logo" src={asset('groove-logo.png')} alt="Groove — Feel the Groove" />
+        </a>
         <p>AI가 읽고, 음악이 기억하는 당신의 순간.</p>
         <div><a href="#experience">Experience</a><a href="#how">How it works</a><a href="#collection">Collection</a></div>
         <small>© 2026 GROOVE XR. All rights reserved.</small>

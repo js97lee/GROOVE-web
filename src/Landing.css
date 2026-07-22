@@ -11,25 +11,10 @@
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 .landing-page {
-  position: relative;
-  height: 100svh;
   overflow-x: hidden;
-  overflow-y: auto;
   color: var(--ink);
   background: var(--paper);
   font-family: "NanumSquare Neo", sans-serif;
-  scroll-snap-type: y mandatory;
-  scroll-behavior: smooth;
-}
-.landing-page > .hero,
-.landing-page > .media-section,
-.landing-page > .intro-band,
-.landing-page > .how-section,
-.landing-page > .collection-section,
-.landing-page > .share-section,
-.landing-page > footer {
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
 }
 .landing-page button, .landing-page a { -webkit-tap-highlight-color: transparent; }
 .icon { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
@@ -47,17 +32,20 @@ html { scroll-behavior: smooth; }
   transform: translateX(-50%);
 }
 
-.brand { display: flex; align-items: center; gap: 13px; color: inherit; text-decoration: none; }
-.brand > span:last-child { display: flex; flex-direction: column; font: 800 24px/1 "NanumSquare Neo", sans-serif; letter-spacing: -.06em; }
-.brand small { margin-top: 3px; color: #7d6cb0; font: 600 7px/1 "NanumSquare Neo", sans-serif; letter-spacing: .04em; }
-.brand-mark { position: relative; display: block; width: 35px; height: 31px; }
-.brand-mark i { position: absolute; bottom: 2px; width: 10px; height: 21px; border-radius: 99px; background: linear-gradient(#b780e8, #54308e); transform-origin: 50% 100%; }
-.brand-mark i:nth-child(1) { left: 1px; height: 16px; transform: rotate(-50deg); }
-.brand-mark i:nth-child(2) { left: 8px; height: 25px; transform: rotate(-22deg); }
-.brand-mark i:nth-child(3) { left: 14px; height: 29px; }
-.brand-mark i:nth-child(4) { left: 21px; height: 24px; transform: rotate(25deg); }
-.brand-mark i:nth-child(5) { left: 26px; height: 15px; transform: rotate(52deg); }
-.brand-mark::after { position: absolute; top: 0; left: 16px; width: 5px; height: 5px; border-radius: 50%; background: #b88be5; content: ""; }
+.brand { display: flex; align-items: center; color: inherit; text-decoration: none; }
+.brand-logo {
+  display: block;
+  width: clamp(52px, 5.5vw, 64px);
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 18%;
+  object-fit: cover;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.footer-brand .brand-logo {
+  width: clamp(56px, 6vw, 72px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
 
 .nav-links { display: flex; align-items: center; gap: 38px; }
 .nav-links a { color: rgba(255,255,255,.62); font: 600 12px "NanumSquare Neo", sans-serif; text-decoration: none; transition: color .2s; }
@@ -69,7 +57,7 @@ html { scroll-behavior: smooth; }
 .hero {
   position: relative;
   display: grid;
-  min-height: 100svh;
+  min-height: 820px;
   grid-template-columns: .8fr 1.2fr;
   align-items: center;
   overflow: hidden;
@@ -162,7 +150,7 @@ html { scroll-behavior: smooth; }
   position: relative;
   width: 100%;
   height: 100svh;
-  min-height: 100svh;
+  min-height: 560px;
   overflow: hidden;
   background: #0a0908;
 }
@@ -177,11 +165,6 @@ html { scroll-behavior: smooth; }
 }
 
 .intro-band {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100svh;
   padding: 120px max(32px, calc((100vw - 1250px) / 2));
   text-align: center;
   background: var(--cream);
@@ -197,10 +180,6 @@ section h2 { margin: 20px 0; font: 700 clamp(38px, 4vw, 58px)/1.12 "NanumSquare 
 .feature-cards p { margin: 0; color: #88817a; font: 400 12px/1.7 "NanumSquare Neo"; }
 
 .how-section {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 100svh;
   padding: 120px max(32px, calc((100vw - 1250px) / 2));
   background: #151311;
   color: white;
@@ -218,7 +197,7 @@ section h2 { margin: 20px 0; font: 700 clamp(38px, 4vw, 58px)/1.12 "NanumSquare 
 .collection-section {
   display: grid;
   grid-template-columns: .8fr 1.2fr;
-  min-height: 100svh;
+  min-height: 700px;
   align-items: center;
   gap: 80px;
   padding: 100px max(32px, calc((100vw - 1250px) / 2));
@@ -257,7 +236,7 @@ section h2 { margin: 20px 0; font: 700 clamp(38px, 4vw, 58px)/1.12 "NanumSquare 
 .share-section {
   position: relative;
   display: grid;
-  min-height: 100svh;
+  min-height: 500px;
   grid-template-columns: .65fr 1.35fr;
   align-items: center;
   overflow: hidden;
@@ -277,7 +256,6 @@ section h2 { margin: 20px 0; font: 700 clamp(38px, 4vw, 58px)/1.12 "NanumSquare 
 footer {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  min-height: 40svh;
   align-items: center;
   gap: 30px;
   padding: 65px max(32px, calc((100vw - 1250px) / 2)) 35px;
@@ -290,7 +268,7 @@ footer > div a { color: inherit; font: 500 10px "NanumSquare Neo"; text-decorati
 footer > small { justify-self: end; font: 400 8px "NanumSquare Neo"; }
 
 @media (max-width: 1050px) {
-  .hero { min-height: 100svh; grid-template-columns: 1fr; padding-top: 140px; }
+  .hero { min-height: 980px; grid-template-columns: 1fr; padding-top: 140px; }
   .hero-copy { max-width: 650px; }
   .hero-visual { margin-top: -30px; }
   .glasses-shell { height: 500px; }
@@ -307,14 +285,14 @@ footer > small { justify-self: end; font: 400 8px "NanumSquare Neo"; }
   .nav-links { position: absolute; top: 61px; right: 0; display: none; width: 210px; align-items: stretch; padding: 18px; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; flex-direction: column; gap: 18px; background: rgba(18,16,15,.95); backdrop-filter: blur(18px); }
   .nav-links.open { display: flex; }
   .nav-links .nav-cta { justify-content: space-between; }
-  .hero { min-height: 100svh; padding: 120px 22px 55px; }
+  .hero { min-height: auto; padding: 120px 22px 55px; }
   .hero-copy { padding-left: 0; }
   .hero h1 { font-size: 45px; }
   .hero-copy > p br { display: none; }
   .hero-actions { align-items: flex-start; flex-direction: column; }
   .trust-row { flex-wrap: wrap; margin-top: 45px; }
   .hero-visual { width: 135%; margin: -30px 0 -70px -17%; transform: scale(.75); }
-  .media-section { min-height: 100svh; height: 100svh; }
+  .media-section { min-height: 420px; height: 70svh; }
   .intro-band,.how-section,.collection-section { padding: 85px 22px; }
   section h2 { font-size: 37px; }
   .feature-cards { grid-template-columns: 1fr; margin-top: 45px; }
@@ -327,7 +305,7 @@ footer > small { justify-self: end; font: 400 8px "NanumSquare Neo"; }
   .moment-browser { grid-template-columns: 1fr; height: auto; }
   .moment-focus { height: 430px; }
   .moment-list { padding: 12px; }
-  .share-section { min-height: 100svh; grid-template-columns: 1fr; padding: 65px 22px; text-align: center; }
+  .share-section { min-height: 620px; grid-template-columns: 1fr; padding: 65px 22px; text-align: center; }
   .share-section img { width: 210px; justify-self: center; }
   .share-section h2 { font-size: 39px; }
   .share-bubbles { display: none!important; }
