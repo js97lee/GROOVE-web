@@ -286,7 +286,19 @@ footer {
 .footer-brand { color: white; }.footer-brand + p { justify-self: end; font: 400 11px "NanumSquare Neo"; }
 footer > div { display: flex; gap: 26px; }
 footer > div a { color: inherit; font: 500 10px "NanumSquare Neo"; text-decoration: none; }
-footer > small { justify-self: end; font: 400 8px "NanumSquare Neo"; }
+footer > small,
+.footer-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  justify-self: end;
+  font: 400 8px "NanumSquare Neo";
+}
+.footer-biz {
+  color: rgba(255, 255, 255, 0.58);
+  letter-spacing: 0.02em;
+}
 
 @media (max-width: 1050px) {
   .hero { min-height: 980px; grid-template-columns: 1fr; padding-top: 140px; }
@@ -332,7 +344,7 @@ footer > small { justify-self: end; font: 400 8px "NanumSquare Neo"; }
   .share-bubbles { display: none!important; }
   .share-section > .primary-button { position: relative; right: auto; bottom: auto; justify-self: center; margin-top: 28px; }
   footer { grid-template-columns: 1fr; text-align: center; }
-  footer > *, .footer-brand + p, footer > small { justify-self: center; }
+  footer > *, .footer-brand + p, footer > small, .footer-meta { justify-self: center; align-items: center; }
 }
 
 @media (prefers-reduced-motion: reduce) {
