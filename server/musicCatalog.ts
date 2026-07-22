@@ -6,19 +6,19 @@ export type CatalogTrack = {
   artist: string
 }
 
-/** 카테고리별 고정 YouTube 곡 — 프로토타입용 안정 재생 맵 */
+/** oEmbed로 유효성 확인된 임베드용 YouTube 곡 맵 */
 export const musicCatalog: Record<MusicCategory, CatalogTrack[]> = {
   Jazz: [
     { videoId: 'ImllpvDwbQ8', title: 'Nightrider', artist: 'Tom Misch & Yussef Dayes' },
-    { videoId: 'jVDLJpF1c_s', title: 'It\'s Only a Paper Moon', artist: 'Ella Fitzgerald' },
+    { videoId: 'vmDDOFXSgAs', title: 'Take Five', artist: 'Dave Brubeck' },
   ],
   'R&B': [
-    { videoId: 'MS91kqWKP3Y', title: 'Kill Bill', artist: 'SZA' },
-    { videoId: 'SQnc1QibJIg', title: 'Good Days', artist: 'SZA' },
+    { videoId: 'SQnc1QibapQ', title: 'Kill Bill', artist: 'SZA' },
+    { videoId: 'UQss35yEfWc', title: 'Kill Bill (Remix)', artist: 'SZA feat. Doja Cat' },
   ],
   '고전 영화 OST': [
-    { videoId: 'GTWqwSnMh8M', title: 'City of Stars', artist: 'La La Land OST' },
-    { videoId: 'OMrT3SAs1-Y', title: 'Moon River', artist: 'Breakfast at Tiffany\'s' },
+    { videoId: 'GTWqwSNQCcg', title: 'City of Stars', artist: 'La La Land OST' },
+    { videoId: 'cZAw8qxn0ZE', title: 'City of Stars (Clip)', artist: 'La La Land' },
   ],
 }
 

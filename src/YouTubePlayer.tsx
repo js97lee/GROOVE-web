@@ -129,6 +129,9 @@ export function YouTubePlayer({
               event.target.playVideo()
             }
           },
+          onError: (event) => {
+            console.error('YouTube player error:', event.data)
+          },
         },
       })
     })
