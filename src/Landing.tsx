@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './Landing.css'
 
-const asset = (name: string) => `${import.meta.env.BASE_URL}assets/${name}`
+const asset = (name: string) =>
+  `${import.meta.env.BASE_URL}assets/${name.split('/').map(encodeURIComponent).join('/')}`
 
 type IconName = 'scan' | 'music' | 'pin' | 'bookmark' | 'share' | 'spark' | 'users' | 'heart' | 'play'
 
@@ -91,6 +92,8 @@ function GlassDemo() {
 function Landing() {
   const [activeMoment, setActiveMoment] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [videoMuted, setVideoMuted] = useState(true)
+  const showcaseRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
     const html = document.documentElement
@@ -105,6 +108,15 @@ function Landing() {
       body.style.overflowY = prevBody
     }
   }, [])
+
+  const toggleShowcaseSound = () => {
+    const video = showcaseRef.current
+    if (!video) return
+    const nextMuted = !video.muted
+    video.muted = nextMuted
+    setVideoMuted(nextMuted)
+    void video.play()
+  }
 
   return (
     <main className="landing-page">
@@ -145,15 +157,27 @@ function Landing() {
       </header>
 
       <section className="media-section" id="showcase" aria-label="GROOVE 체험 영상">
-        <img
-          src={asset('showcase.jpg')}
-          alt="스마트 글래스로 GROOVE를 경험하는 모습"
+        <video
+          ref={showcaseRef}
+          className="media-video"
+          src={asset('Groove-영상.mp4')}
+          poster={asset('showcase.jpg')}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
         />
         <div className="media-overlay">
-          <button className="media-play" type="button" aria-label="영상 재생 (준비 중)">
-            <span>▶</span>
+          <button
+            className="media-play"
+            type="button"
+            onClick={toggleShowcaseSound}
+            aria-label={videoMuted ? '영상 소리 켜기' : '영상 음소거'}
+          >
+            <span>{videoMuted ? '▶' : 'Ⅱ'}</span>
           </button>
-          <p>곧 영상으로 만나요</p>
+          <p>{videoMuted ? '탭해서 소리를 켜보세요' : '재생 중'}</p>
         </div>
       </section>
 
