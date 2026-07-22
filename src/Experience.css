@@ -480,6 +480,51 @@
   -webkit-backdrop-filter: blur(8px);
 }
 
+.track-actions {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: 8px;
+  margin-top: 7px;
+}
+
+.track-actions .listen-button {
+  grid-column: auto;
+  margin-top: 0;
+}
+
+.listen-button.ghost {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.music-hint {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: clamp(9px, 1.1vw, 12px);
+}
+
+.groove-music-frame {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  border: 0;
+  overflow: hidden;
+}
+
+.now-playing-caption {
+  position: absolute;
+  z-index: 4;
+  bottom: 4%;
+  left: 50%;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: clamp(10px, 1.2vw, 13px);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
 .listen-button svg {
   width: 17px;
   fill: currentColor;

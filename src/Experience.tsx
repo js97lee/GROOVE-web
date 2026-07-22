@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  pickCatalogTrack,
+  youtubeEmbedSrc,
+  youtubeWatchUrl,
+  type CatalogTrack,
+  type MusicCategory,
+} from './musicCatalog'
 import './Experience.css'
 
 type CameraState = 'idle' | 'loading' | 'active' | 'error'
@@ -19,7 +26,7 @@ type AnalysisResult = {
   cocktailConfidence: number
   moodMatch: number
   keywords: [string, string, string]
-  musicCategory: 'Jazz' | 'R&B' | '고전 영화 OST'
+  musicCategory: MusicCategory
   trackTitle: string
   trackArtist: string
   recommendationReason: string
@@ -28,6 +35,32 @@ type AnalysisResult = {
 const asset = (name: string) => `${import.meta.env.BASE_URL}assets/${name}`
 const wait = (milliseconds: number) =>
   new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds))
+
+const musicScenes: Scene[] = ['result', 'music', 'player', 'share', 'gallery']
+
+function GrooveMusic({
+  track,
+  muted,
+  active,
+}: {
+  track: CatalogTrack | null
+  muted: boolean
+  active: boolean
+}) {
+  if (!track || !active) return null
+
+  return (
+    <iframe
+      key={`${track.videoId}-${muted ? 'mute' : 'sound'}`}
+      className="groove-music-frame"
+      title={`${track.title} — ${track.artist}`}
+      src={youtubeEmbedSrc(track.videoId, muted)}
+      allow="autoplay; encrypted-media; picture-in-picture"
+      allowFullScreen
+      tabIndex={-1}
+    />
+  )
+}
 
 function GrooveLogo() {
   return (
@@ -123,6 +156,8 @@ function Experience() {
   const [selectedShareImage, setSelectedShareImage] = useState('')
   const [shareStatus, setShareStatus] = useState('')
   const [isSharing, setIsSharing] = useState(false)
+  const [catalogTrack, setCatalogTrack] = useState<CatalogTrack | null>(null)
+  const [musicMuted, setMusicMuted] = useState(true)
 
   useEffect(() => {
     const html = document.documentElement
@@ -231,6 +266,8 @@ function Experience() {
     setSelectedShareImage(image)
     setGalleryImages([image])
     setAnalysis(null)
+    setCatalogTrack(null)
+    setMusicMuted(true)
     setAnalysisError('')
     setFlash(true)
     setScene('matching')
@@ -238,7 +275,14 @@ function Experience() {
 
     try {
       const [result] = await Promise.all([requestAnalysis(image), wait(3000)])
-      setAnalysis(result)
+      const track = pickCatalogTrack(result.musicCategory, result.moodMatch)
+      setCatalogTrack(track)
+      setAnalysis({
+        ...result,
+        trackTitle: track.title,
+        trackArtist: track.artist,
+      })
+      setMusicMuted(true)
       setScene('result')
     } catch (error) {
       setAnalysisError(error instanceof Error ? error.message : '분석에 실패했습니다.')
@@ -326,6 +370,8 @@ function Experience() {
     setSelectedShareImage('')
     setGalleryImages([])
     setAnalysis(null)
+    setCatalogTrack(null)
+    setMusicMuted(true)
     setAnalysisError('')
     setShareStatus('')
     setScene('intro')
@@ -374,17 +420,26 @@ function Experience() {
     setSelectedShareImage(urls[0])
   }
 
-  const youtubeUrl = analysis
-    ? `https://www.youtube.com/results?search_query=${encodeURIComponent(
-        `${analysis.trackTitle} ${analysis.trackArtist}`,
-      )}`
-    : '#'
+  const youtubeUrl = catalogTrack
+    ? youtubeWatchUrl(catalogTrack.videoId)
+    : analysis
+      ? `https://www.youtube.com/results?search_query=${encodeURIComponent(
+          `${analysis.trackTitle} ${analysis.trackArtist}`,
+        )}`
+      : '#'
+
+  const musicActive = Boolean(catalogTrack && musicScenes.includes(scene))
+  const nowPlayingLabel = useMemo(() => {
+    if (!catalogTrack) return ''
+    return `${catalogTrack.title} · ${catalogTrack.artist}`
+  }, [catalogTrack])
 
   const showCapturedFrame = capturedImage && !['splash', 'intro', 'countdown'].includes(scene)
 
   return (
     <main className="page">
       <section className={`xr-frame scene-${scene}`}>
+        <GrooveMusic track={catalogTrack} muted={musicMuted} active={musicActive} />
         <video ref={videoRef} className="camera-feed" muted playsInline aria-label="실시간 카메라 화면" />
         {showCapturedFrame && <img className="captured-frame" src={capturedImage} alt="촬영된 칵테일" />}
         <div className="camera-placeholder" aria-hidden="true" />
@@ -476,10 +531,22 @@ function Experience() {
                   <b>{analysis.trackTitle}</b>
                   <span>{analysis.trackArtist}</span>
                   <p>{analysis.recommendationReason}</p>
-                  <button className="listen-button" type="button" onClick={() => setScene('music')}>
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 8 6 4-6 4V8Z" /></svg>
-                    노래 듣기
-                  </button>
+                  <div className="track-actions">
+                    <button
+                      className="listen-button"
+                      type="button"
+                      onClick={() => setMusicMuted((current) => !current)}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 8 6 4-6 4V8Z" /></svg>
+                      {musicMuted ? '소리 켜기' : '음소거'}
+                    </button>
+                    <button className="listen-button ghost" type="button" onClick={() => setScene('music')}>
+                      플레이어
+                    </button>
+                  </div>
+                  {musicMuted && (
+                    <small className="music-hint">결과가 나오면 음악이 함께 재생돼요. 탭해서 소리를 켜보세요.</small>
+                  )}
                 </div>
               </article>
             </div>
@@ -528,13 +595,22 @@ function Experience() {
             <VinylPlayer large />
             <div className="player-mascot"><SpriteMascot variant="listen" size="large" /></div>
             <div className="player-actions">
-              <a className="youtube-play" href={youtubeUrl} target="_blank" rel="noreferrer">
-                <span>▶</span> YouTube에서 재생
+              <button
+                className="youtube-play"
+                type="button"
+                onClick={() => setMusicMuted((current) => !current)}
+              >
+                <span>{musicMuted ? '▶' : 'Ⅱ'}</span>
+                {musicMuted ? '소리 켜기' : '재생 중'}
+              </button>
+              <a className="recommend-friend" href={youtubeUrl} target="_blank" rel="noreferrer">
+                YouTube에서 열기
               </a>
               <button className="recommend-friend" type="button" onClick={() => setScene('share')}>
                 친구에게 추천
               </button>
             </div>
+            {nowPlayingLabel && <p className="now-playing-caption">{nowPlayingLabel}</p>}
           </div>
         )}
 
