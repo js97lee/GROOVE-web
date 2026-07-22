@@ -296,7 +296,9 @@ footer > small,
   font: 400 8px "NanumSquare Neo";
 }
 .footer-biz {
-  color: rgba(255, 255, 255, 0.58);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  font-weight: 700;
   letter-spacing: 0.02em;
 }
 

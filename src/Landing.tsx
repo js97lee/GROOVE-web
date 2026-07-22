@@ -273,7 +273,7 @@ function Landing() {
         <p>AI가 읽고, 음악이 기억하는 당신의 순간.</p>
         <div><a href="#experience">Experience</a><a href="#how">How it works</a><a href="#collection">Collection</a></div>
         <small className="footer-meta">
-          <span className="footer-biz">팀명 도루왕도마뱀</span>
+          <span className="footer-biz">도루왕도마뱀</span>
           <span>© 2026 GROOVE XR. All rights reserved.</span>
         </small>
       </footer>
