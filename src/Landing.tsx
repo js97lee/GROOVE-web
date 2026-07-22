@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import './Landing.css'
 
 const asset = (name: string) =>
@@ -114,7 +115,7 @@ function Landing() {
           <a href="#experience" onClick={() => setMenuOpen(false)}>Experience</a>
           <a href="#how" onClick={() => setMenuOpen(false)}>How it works</a>
           <a href="#collection" onClick={() => setMenuOpen(false)}>Collection</a>
-          <a className="nav-cta" href="#demo" onClick={() => setMenuOpen(false)}>Try GROOVE <span>↗</span></a>
+          <a className="nav-cta" href="/" onClick={() => setMenuOpen(false)}>Try GROOVE <span>↗</span></a>
         </div>
       </nav>
 
@@ -125,8 +126,7 @@ function Landing() {
           <h1>한 잔의 분위기가<br /><em>음악이 되는 순간.</em></h1>
           <p>GROOVE는 스마트 글래스로 눈앞의 칵테일과 공간을 읽고,<br />지금 이 순간에 가장 어울리는 음악을 들려줍니다.</p>
           <div className="hero-actions">
-            <a className="primary-button" href="#demo">경험 시작하기 <span>→</span></a>
-            <a className="text-button" href="#how"><i>▶</i> 작동 방식 보기</a>
+            <Link className="primary-button" to="/">경험 시작하기 <span>→</span></Link>
           </div>
           <div className="trust-row">
             <span><b>AI</b> 실시간 무드 분석</span><span><b>XR</b> 핸즈프리 경험</span><span><b>∞</b> 순간 아카이빙</span>
@@ -143,13 +143,13 @@ function Landing() {
       <section className="media-section" id="showcase" aria-label="GROOVE 체험 영상">
         <video
           className="media-video"
-          src={asset('Groove-영상.mp4')}
+          src={asset('groove-showcase.mp4')}
           poster={asset('showcase.jpg')}
           autoPlay
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="auto"
         />
       </section>
 
@@ -213,7 +213,7 @@ function Landing() {
         <img src={asset('character-cocktail.png')} alt="칵테일을 든 GROOVE 마스코트 Groovy" />
         <div><span className="section-kicker">SHARE THE GROOVE</span><h2>좋은 순간은<br />함께할수록 더 선명해지니까.</h2></div>
         <div className="share-bubbles"><span>#NightRide</span><span>#GinTonic</span><span>#Seongsu</span></div>
-        <a href="#top" className="primary-button">나의 Groove 시작하기 <span>↗</span></a>
+        <Link to="/" className="primary-button">나의 Groove 시작하기 <span>↗</span></Link>
       </section>
 
       <footer>
