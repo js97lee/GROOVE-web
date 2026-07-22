@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import './Landing.css'
 
@@ -21,6 +21,61 @@ const icons: Record<IconName, React.ReactNode> = {
 
 function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   return <svg className="icon" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">{icons[name]}</svg>
+}
+
+function CursorBuddy() {
+  const buddyRef = useRef<HTMLImageElement>(null)
+  const target = useRef({ x: -200, y: -200 })
+  const current = useRef({ x: -200, y: -200 })
+  const visible = useRef(false)
+
+  useEffect(() => {
+    const media = window.matchMedia('(hover: hover) and (pointer: fine)')
+    if (!media.matches) return
+
+    let frame = 0
+    const onMove = (event: MouseEvent) => {
+      target.current = { x: event.clientX, y: event.clientY }
+      visible.current = true
+    }
+    const onLeave = () => {
+      visible.current = false
+    }
+
+    const tick = () => {
+      const buddy = buddyRef.current
+      if (buddy) {
+        current.current.x += (target.current.x - current.current.x) * 0.18
+        current.current.y += (target.current.y - current.current.y) * 0.18
+        buddy.style.transform = `translate3d(${current.current.x + 18}px, ${current.current.y + 14}px, 0)`
+        buddy.style.opacity = visible.current ? '1' : '0'
+      }
+      frame = window.requestAnimationFrame(tick)
+    }
+
+    document.body.classList.add('landing-buddy-cursor')
+    window.addEventListener('mousemove', onMove, { passive: true })
+    window.addEventListener('mouseleave', onLeave)
+    frame = window.requestAnimationFrame(tick)
+
+    return () => {
+      document.body.classList.remove('landing-buddy-cursor')
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseleave', onLeave)
+      window.cancelAnimationFrame(frame)
+    }
+  }, [])
+
+  return (
+    <img
+      ref={buddyRef}
+      className="cursor-buddy"
+      src={asset('cursor-cozy.png')}
+      alt=""
+      aria-hidden="true"
+      draggable={false}
+    />
+  )
 }
 
 const moments = [
@@ -100,6 +155,7 @@ function Landing() {
 
   return (
     <main className="landing-page">
+      <CursorBuddy />
       <nav className="top-nav">
         <a className="brand" href="#top" aria-label="GROOVE 홈">
           <img className="brand-logo" src={asset('groove-logo.png')} alt="Groove — Feel the Groove" />
